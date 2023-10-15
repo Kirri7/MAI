@@ -1,7 +1,13 @@
 #include <stdio.h>
 
-int main() {
-    char* filename = "example.bin";
+int main(int argc, char *argv[]) {
+    if (argc != 2)
+    {
+        printf("Программа.exe /folder/file.bin\n");
+        return 0;
+    }
+
+    const char* filename = argv[1];
 
     FILE* file = fopen(filename, "wb"); // запись в бинарном режиме
 
