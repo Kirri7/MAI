@@ -1,9 +1,7 @@
-#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
-#include <time.h>
 #include <math.h>
 #include <stdarg.h>
 
@@ -29,50 +27,88 @@ static const char* errorMessages[] = {
     "Неизвестная ошибка, что-то пошло не так 🫢"
 };
 
-ErrorCode intToRoman(int num);
+ErrorCode intToRoman(int num, char result[], int resLen);
 ErrorCode findLargestFibonacci(unsigned int n, unsigned int* prevFib, unsigned int* answer);
-ErrorCode findPrevFibonacci(unsigned int fib, unsigned int n, unsigned int prev);
-ErrorCode cekendorfRepresentation(unsigned int n);
+ErrorCode findPrevFibonacci(unsigned int fib, unsigned int n, unsigned int prev, char result[], int resLen, int* resPos);
+ErrorCode cekendorfRepresentation(unsigned int n, char result[], int resLen);
 ErrorCode fromDecimal(int decimal, int base, int isUpper, char** res);
 int handmadeStrtoi(const char* str, char** endptr, int base, int* exitStatus);
 ErrorCode toDecimal(const char* str, int base, int* res);
-void dumpSignedInt(int *ptr);
-void dumpUnsignedInt(unsigned int *ptr);
-void dumpDouble(double *ptr);
-void dumpFloat(float *ptr);
-ErrorCode overfprintf(FILE *stream, const char *format, ...);
+void dumpfSignedInt(FILE* stream, int *ptr);
+void dumpfUnsignedInt(FILE* stream, unsigned int *ptr);
+void dumpfDouble(FILE* stream, double *ptr);
+void dumpfFloat(FILE* stream, float *ptr);
+ErrorCode overfprintf(FILE* stream, const char *format, ...);
+void dumpsSignedInt(char* str, int *ptr, int* resPos);
+void dumpsUnsignedInt(char* str, unsigned int *ptr, int* resPos);
+void dumpsDouble(char* str, double *ptr, int* resPos);
+void dumpsFloat(char* str, float *ptr, int* resPos);
+ErrorCode oversprintf(char* str, const char *format, ...);
 
 int main(int argc, char *argv[]) {
+    FILE* stream = stdout;
+    //FILE* stream = fopen("out.txt", "w");
 
-    overfprintf(stdout,"h%Ro %d lo\n", 14, 113);
-    overfprintf(stdout,"32: %Zr|\n", 32);
-    overfprintf(stdout,"-11: %Cv|\n", -11, 12);
-    overfprintf(stdout,"35: %CV|\n", 35, 36);
-    overfprintf(stdout,"-256: %CV|\n", -256, 0);
-    overfprintf(stdout,"-256: %to|\n", "-256", 0);
-    overfprintf(stdout,"-ZA: %TO|\n", "-ZA", 36);
-    overfprintf(stdout,"2147483648: %mi\n", 2147483648);
-    overfprintf(stdout,"2147483648: %mu\n", 2147483648);
-    overfprintf(stdout,"2.4: %md\n", 2.4);
-    overfprintf(stdout,"2.4: %mf\n", 2.4);
+    overfprintf(stream,"h%Ro %d lo\n", 14, 113);
+    overfprintf(stream,"32: %Zr|\n", 32);
+    overfprintf(stream,"-11: %Cv|\n", -11, 12);
+    overfprintf(stream,"35: %CV|\n", 35, 36);
+    overfprintf(stream,"-256: %CV|\n", -256, 0);
+    overfprintf(stream,"-256: %to|\n", "-256", 0);
+    overfprintf(stream,"-ZA: %TO|\n", "-ZA", 36);
+    overfprintf(stream,"2147483648: %mi\n", 2147483648);
+    overfprintf(stream,"2147483648: %mu\n", 2147483648);
+    overfprintf(stream,"2.4: %md\n", 2.4);
+    overfprintf(stream,"2.4: %mf\n", 2.4);
 
+    char str[1000];
+    for (int i = 0; i < 1000 - 1; ++i) str[i] = 'x';
+    str[sizeof(str) - 1] = '\0';
+
+    oversprintf(str,"h%Ro %d lo\n", 14, 113);
+    printf("-> %s", str);
+    oversprintf(str,"32: %Zr|\n", 32);
+    printf("-> %s", str);
+    oversprintf(str,"-11: %Cv|\n", -11, 12);
+    printf("-> %s", str);
+    oversprintf(str,"35: %CV|\n", 35, 36);
+    printf("-> %s", str);
+    oversprintf(str,"-256: %CV|\n", -256, 0);
+    printf("-> %s", str);
+    oversprintf(str,"-256: %to|\n", "-256", 0);
+    printf("-> %s", str);
+    oversprintf(str,"-ZA: %TO|\n", "-ZA", 36);
+    printf("-> %s", str);
+    oversprintf(str,"2147483648: %mi\n", 2147483648);
+    printf("-> %s", str);
+    oversprintf(str,"2147483648: %mu\n", 2147483648);
+    printf("-> %s", str);
+    oversprintf(str,"2.4: %md\n", 2.4);
+    printf("-> %s", str);
+    oversprintf(str,"2.4: %mf\n", 2.4);
+    printf("-> %s", str);
+
+    
 
     return 0;
 }
 
-ErrorCode intToRoman(int num) {
+ErrorCode intToRoman(int num, char result[], int resLen) {
     //https://www.romannumerals.org/blog/which-is-the-biggest-number-in-roman-numerals-6 -> [1,3999]
     if (num < 1 || num > 3999) {
         //printf("\nЧисло не входит в диапазон от 1 до 3999\n");
         return INCORRECT_INPUT;
     }
+    int resPos = 0;
 
-    char *roman[] = {"M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
+    char* roman[] = {"M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
     int values[] = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
 
     for (int i = 0; i < 13; ++i) {
         while (num >= values[i]) {
-            printf("%s", roman[i]);
+            //printf("%s", roman[i]);
+            //sprintf(result, "%s", roman[i]);
+            resPos += snprintf(result + resPos, resLen - resPos, "%s", roman[i]);
             num -= values[i];
         }
     }
@@ -81,7 +117,7 @@ ErrorCode intToRoman(int num) {
 }
 
 int romanToInt(const char *roman) {
-    char *symbols[] = {"M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
+    char* symbols[] = {"M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
     int values[] = {1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1};
 
     int result = 0;
@@ -116,11 +152,12 @@ ErrorCode findLargestFibonacci(unsigned int n, unsigned int* prevFib, unsigned i
     return SUCCESS;
 }
 
-ErrorCode findPrevFibonacci(unsigned int fib, unsigned int n, unsigned int prev) {
+ErrorCode findPrevFibonacci(unsigned int fib, unsigned int n, unsigned int prev, char result[], int resLen, int* resPos) {
     if (fib <= 0) {
         //return INCORRECT_INPUT;
         return SUCCESS;
     }
+    
 
     int print = 0;
     if (n >= fib) {
@@ -128,7 +165,7 @@ ErrorCode findPrevFibonacci(unsigned int fib, unsigned int n, unsigned int prev)
         n -= fib;
     } 
 
-    switch (findPrevFibonacci(prev, n, (fib - prev))) {
+    switch (findPrevFibonacci(prev, n, (fib - prev), result, resLen, resPos)) {
         case INCORRECT_INPUT:
             return INCORRECT_INPUT;
         default:
@@ -137,21 +174,28 @@ ErrorCode findPrevFibonacci(unsigned int fib, unsigned int n, unsigned int prev)
 
     if (print) {
         // printf("%d ", fib);
-        printf("1 ");
+        // printf("1 ");
+        // snprintf(result, strlen(result), "1 ");
+        // sprintf(result, "1 ");
+        *resPos += snprintf(result + *resPos, resLen - *resPos, "1 ");
         n -= fib;
     } 
     else {
-        printf("0 ");
         // printf("(%d) ", fib);
+        // printf("0 ");
+        // snprintf(result, strlen(result), "0 ");
+        // sprintf(result, "0 ");
+        *resPos += snprintf(result + *resPos, resLen - *resPos, "0 ");
     }
     return SUCCESS;
 }
 
 // цекендорфово представление чисел
-ErrorCode cekendorfRepresentation(unsigned int n) {
+ErrorCode cekendorfRepresentation(unsigned int n, char result[], int resLen) {
     if (n <= 0) {
         return INCORRECT_INPUT;
     }
+    int resPos = 0;
 
     unsigned int prev;
     unsigned int fib;
@@ -162,14 +206,17 @@ ErrorCode cekendorfRepresentation(unsigned int n) {
             return OVERFLOW_ERROR;
     }
 
-    switch (findPrevFibonacci(fib, n, prev)) {
+    switch (findPrevFibonacci(fib, n, prev, result, resLen, &resPos)) {
         default:
             break;
         case INCORRECT_INPUT:
             return INCORRECT_INPUT;
     }
 
-    printf("1");
+    // printf("1");
+    //snprintf(result, strlen(result), "1 ");
+    // sprintf(result, "1 ");
+    resPos += snprintf(result + resPos, resLen - resPos, "1 ");
     return SUCCESS;
 }
 
@@ -219,7 +266,8 @@ ErrorCode fromDecimal(int decimal, int base, int isUpper, char** res) {
 
     output[maxLen - 1] = '\0';
     *res = output;
-    printf("%s", output);
+    //printf("%s", output);
+    //free(output);
 
     return SUCCESS;
 }
@@ -300,53 +348,53 @@ ErrorCode toDecimal(const char* str, int base, int* res) {
     return SUCCESS;
 }
 
-void dumpSignedInt(int *ptr) {
+void dumpfSignedInt(FILE* stream, int *ptr) {
     // https://www.youtube.com/watch?v=zxb8DvLUqcM
     // little-endian
     unsigned char *bytePtr = (unsigned char *)ptr;
 
     for (int i = sizeof(int) - 1; i >= 0; --i) {
         for (int j = 7; j >= 0; --j) {
-            printf("%d", (bytePtr[i] >> j) & 1);
+            fprintf(stream, "%d", (bytePtr[i] >> j) & 1);
         }
-        printf(" ");
+        fprintf(stream, " ");
     }
 }
 
-void dumpUnsignedInt(unsigned int *ptr) {
+void dumpfUnsignedInt(FILE* stream, unsigned int *ptr) {
     unsigned char *bytePtr = (unsigned char *)ptr;
 
     for (int i = sizeof(unsigned int) - 1; i >= 0; --i) {
         for (int j = 7; j >= 0; --j) {
-            printf("%d", (bytePtr[i] >> j) & 1);
+            fprintf(stream, "%d", (bytePtr[i] >> j) & 1);
         }
-        printf(" ");
+        fprintf(stream, " ");
     }
 }
 
-void dumpDouble(double *ptr) {
+void dumpfDouble(FILE* stream, double *ptr) {
     unsigned char *bytePtr = (unsigned char *)ptr;
 
     for (int i = sizeof(double) - 1; i >= 0; --i) {
         for (int j = 7; j >= 0; --j) {
-            printf("%d", (bytePtr[i] >> j) & 1);
+            fprintf(stream, "%d", (bytePtr[i] >> j) & 1);
         }
-        printf(" ");
+        fprintf(stream, " ");
     }
 }
 
-void dumpFloat(float *ptr) {
+void dumpfFloat(FILE* stream, float *ptr) {
     unsigned char *bytePtr = (unsigned char *)ptr;
 
     for (int i = sizeof(float) - 1; i >= 0; --i) {
         for (int j = 7; j >= 0; --j) {
-            printf("%d", (bytePtr[i] >> j) & 1);
+            fprintf(stream, "%d", (bytePtr[i] >> j) & 1);
         }
-        printf(" ");
+        fprintf(stream, " ");
     }
 }
 
-ErrorCode overfprintf(FILE *stream, const char *format, ...) {
+ErrorCode overfprintf(FILE* stream, const char *format, ...) {
     if (format == NULL) return INCORRECT_INPUT;
 
     va_list argc;
@@ -355,84 +403,270 @@ ErrorCode overfprintf(FILE *stream, const char *format, ...) {
     const char* letterPtr = format;
     while (*letterPtr != '\0') {
         if (*letterPtr != '%') {
-            printf("%c", *letterPtr);
+            fprintf(stream,"%c", *letterPtr);
         } 
         else if (*(letterPtr+1) != '\0' && *(letterPtr+2) != '\0')
         {
-            char additFlag[] = {*(letterPtr+1), *(letterPtr+2)};
+            char additFlag[] = {*(letterPtr+1), *(letterPtr+2), '\0'};
             letterPtr += 2;
+            const int resLen = 50;
             if (strcmp(additFlag, "Ro") == 0)
             {
                 int num = va_arg(argc, int);
-                switch (intToRoman(num)) {
+                char result[resLen];
+                for (int i = 0; i < resLen - 1; ++i) result[i] = 'x';
+                result[sizeof(result) - 1] = '\0';
+
+                switch (intToRoman(num, result, resLen)) {
                     default:
                         break;
                     case INCORRECT_INPUT:
+                        va_end(argc);
                         return INCORRECT_INPUT;
                 }
+                fprintf(stream, "%s", result);
             }
             else if (strcmp(additFlag, "Zr") == 0)
             {
                 unsigned int num = va_arg(argc, unsigned int);
-                switch (cekendorfRepresentation(num)) {
+                char result[resLen];
+                for (int i = 0; i < resLen - 1; ++i) result[i] = 'x';
+                result[sizeof(result) - 1] = '\0';
+
+                switch (cekendorfRepresentation(num, result, resLen)) {
                     default:
                         break;
                     case OVERFLOW_ERROR:
+                        va_end(argc);
                         return OVERFLOW_ERROR;
                     case INCORRECT_INPUT:
+                        va_end(argc);
                         return INCORRECT_INPUT;
                 }
+                fprintf(stream, "%s", result);
             }
             else if (strcmp(additFlag, "Cv") == 0 || strcmp(additFlag, "CV") == 0)
             {
                 int num = va_arg(argc, int);
                 int base = va_arg(argc, int);
-                char* res; //todo
-                switch (fromDecimal(num, base, isupper(additFlag[1]), &res)) {
+                char* result;
+
+                switch (fromDecimal(num, base, isupper(additFlag[1]), &result)) {
                     default:
                         break;
                     case MALLOC_ERROR:
+                        va_end(argc);
                         return MALLOC_ERROR;
                 }
+                fprintf(stream, "%s", result);
+                free(result);
             }
             else if (strcmp(additFlag, "to") == 0 || strcmp(additFlag, "TO") == 0)
             {
                 const char* num = va_arg(argc, const char*);
                 int base = va_arg(argc, int);
-                int res; //todo
+                int res;
+
                 switch (toDecimal(num, base, &res)) {
                     default:
                         break;
                     case MALLOC_ERROR:
+                        va_end(argc);
                         return MALLOC_ERROR;
                 }
-                printf("%d", res);
+                fprintf(stream,"%d", res);
             }
             else if (strcmp(additFlag, "mi") == 0)
             {
                 int num = va_arg(argc, int);
-                dumpSignedInt(&num);
+                dumpfSignedInt(stream, &num);
             }
             else if (strcmp(additFlag, "mu") == 0)
             {
                 unsigned int num = va_arg(argc, unsigned int);
-                dumpUnsignedInt(&num);
+                dumpfUnsignedInt(stream, &num);
             }
             else if (strcmp(additFlag, "md") == 0)
             {
                 double num = va_arg(argc, double);
-                dumpDouble(&num);
+                dumpfDouble(stream, &num);
             }
             else if (strcmp(additFlag, "mf") == 0)
             {
                 float num = va_arg(argc, double); 
                 // float num = va_arg(argc, float);
-                dumpFloat(&num);
+                dumpfFloat(stream, &num);
             }
             else
             {
-                char additFlag2[] = {'%', *(letterPtr-1), *(letterPtr)};
-                vprintf(additFlag2, argc);
+                char additFlag2[] = {'%', *(letterPtr-1), *(letterPtr), '\0'};
+                vfprintf(stream, additFlag2, argc);
+            }
+        }
+
+
+        ++letterPtr;
+    }
+    va_end(argc);
+    return SUCCESS;
+}
+
+void dumpsSignedInt(char* str, int *ptr, int* resPos) {
+    // https://www.youtube.com/watch?v=zxb8DvLUqcM
+    // little-endian
+    unsigned char *bytePtr = (unsigned char *)ptr;
+
+    for (int i = sizeof(int) - 1; i >= 0; --i) {
+        for (int j = 7; j >= 0; --j) {
+            *resPos += sprintf(str + *resPos, "%d", (bytePtr[i] >> j) & 1);
+        }
+        *resPos += sprintf(str + *resPos, " ");
+    }
+}
+
+void dumpsUnsignedInt(char* str, unsigned int *ptr, int* resPos) {
+    unsigned char *bytePtr = (unsigned char *)ptr;
+
+    for (int i = sizeof(unsigned int) - 1; i >= 0; --i) {
+        for (int j = 7; j >= 0; --j) {
+            *resPos += sprintf(str + *resPos, "%d", (bytePtr[i] >> j) & 1);
+        }
+        *resPos += sprintf(str + *resPos, " ");
+    }
+}
+
+void dumpsDouble(char* str, double *ptr, int* resPos) {
+    unsigned char *bytePtr = (unsigned char *)ptr;
+
+    for (int i = sizeof(double) - 1; i >= 0; --i) {
+        for (int j = 7; j >= 0; --j) {
+            *resPos += sprintf(str + *resPos, "%d", (bytePtr[i] >> j) & 1);
+        }
+        *resPos += sprintf(str + *resPos, " ");
+    }
+}
+
+void dumpsFloat(char* str, float *ptr, int* resPos) {
+    unsigned char *bytePtr = (unsigned char *)ptr;
+
+    for (int i = sizeof(float) - 1; i >= 0; --i) {
+        for (int j = 7; j >= 0; --j) {
+            *resPos += sprintf(str + *resPos, "%d", (bytePtr[i] >> j) & 1);
+        }
+        *resPos += sprintf(str + *resPos, " ");
+    }
+}
+
+//resPos += sprintf(str + resPos, 
+
+ErrorCode oversprintf(char* str, const char *format, ...) {
+    if (format == NULL) return INCORRECT_INPUT;
+    int resPos = 0;
+
+    va_list argc;
+    va_start(argc, format);
+
+    const char* letterPtr = format;
+    while (*letterPtr != '\0') {
+        if (*letterPtr != '%') {
+            resPos += sprintf(str + resPos,"%c", *letterPtr);
+        } 
+        else if (*(letterPtr+1) != '\0' && *(letterPtr+2) != '\0')
+        {
+            char additFlag[] = {*(letterPtr+1), *(letterPtr+2), '\0'};
+            letterPtr += 2;
+            const int resLen = 50;
+            if (strcmp(additFlag, "Ro") == 0)
+            {
+                int num = va_arg(argc, int);
+                char result[resLen];
+                for (int i = 0; i < resLen - 1; ++i) result[i] = 'x';
+                result[sizeof(result) - 1] = '\0';
+
+                switch (intToRoman(num, result, resLen)) {
+                    default:
+                        break;
+                    case INCORRECT_INPUT:
+                        va_end(argc);
+                        return INCORRECT_INPUT;
+                }
+                resPos += sprintf(str + resPos, "%s", result);
+            }
+            else if (strcmp(additFlag, "Zr") == 0)
+            {
+                unsigned int num = va_arg(argc, unsigned int);
+                char result[resLen];
+                for (int i = 0; i < resLen - 1; ++i) result[i] = 'x';
+                result[sizeof(result) - 1] = '\0';
+
+                switch (cekendorfRepresentation(num, result, resLen)) {
+                    default:
+                        break;
+                    case OVERFLOW_ERROR:
+                        va_end(argc);
+                        return OVERFLOW_ERROR;
+                    case INCORRECT_INPUT:
+                        va_end(argc);
+                        return INCORRECT_INPUT;
+                }
+                resPos += sprintf(str + resPos, "%s", result);
+            }
+            else if (strcmp(additFlag, "Cv") == 0 || strcmp(additFlag, "CV") == 0)
+            {
+                int num = va_arg(argc, int);
+                int base = va_arg(argc, int);
+                char* result;
+
+                switch (fromDecimal(num, base, isupper(additFlag[1]), &result)) {
+                    default:
+                        break;
+                    case MALLOC_ERROR:
+                        va_end(argc);
+                        return MALLOC_ERROR;
+                }
+                resPos += sprintf(str + resPos, "%s", result);
+                free(result);
+            }
+            else if (strcmp(additFlag, "to") == 0 || strcmp(additFlag, "TO") == 0)
+            {
+                const char* num = va_arg(argc, const char*);
+                int base = va_arg(argc, int);
+                int res;
+
+                switch (toDecimal(num, base, &res)) {
+                    default:
+                        break;
+                    case MALLOC_ERROR:
+                        va_end(argc);
+                        return MALLOC_ERROR;
+                }
+                resPos += sprintf(str + resPos,"%d", res);
+            }
+            else if (strcmp(additFlag, "mi") == 0)
+            {
+                int num = va_arg(argc, int);
+                dumpsSignedInt(str, &num, &resPos);
+            }
+            else if (strcmp(additFlag, "mu") == 0)
+            {
+                unsigned int num = va_arg(argc, unsigned int);
+                dumpsUnsignedInt(str, &num, &resPos);
+            }
+            else if (strcmp(additFlag, "md") == 0)
+            {
+                double num = va_arg(argc, double);
+                dumpsDouble(str, &num, &resPos);
+            }
+            else if (strcmp(additFlag, "mf") == 0)
+            {
+                float num = va_arg(argc, double); 
+                // float num = va_arg(argc, float);
+                dumpsFloat(str, &num, &resPos);
+            }
+            else
+            {
+                char additFlag2[] = {'%', *(letterPtr-1), *(letterPtr), '\0'};
+                resPos += vsprintf(str + resPos, additFlag2, argc);
             }
         }
 
