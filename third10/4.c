@@ -37,7 +37,7 @@ typedef struct String
 ErrorCode createString(String *str, char *input) {
     if (str == NULL || input == NULL)
         return INCORRECT_INPUT;
-    //char *memoryData = malloc(unsigned long)
+    
     char *i = input;
     int cnt = 0;
     while (i != NULL) {
@@ -49,7 +49,19 @@ ErrorCode createString(String *str, char *input) {
     if (i == NULL)
         return INCORRECT_INPUT;
     
-    str->data = input;
+    char *memoryData = (char *)malloc((cnt + 1) * sizeof(char));
+    if (memoryData == NULL) 
+        return MALLOC_ERROR;
+
+    i = input;
+    int j = 0;
+    while (*i != '\0') {
+        memoryData[j] = *i;
+        ++i;
+        ++j;
+    }
+    memoryData[j] = '\0';
+    str->data = memoryData;
     str->len = cnt;
 
     return SUCCESS;
@@ -59,7 +71,7 @@ ErrorCode deleteString(String *str) {
     if (str == NULL)
         return INCORRECT_INPUT;
     str->len = 0;
-    //free(str->data); //todo
+    free(str->data);
     str->data = NULL;
     return SUCCESS;
 }
@@ -115,27 +127,61 @@ ErrorCode copyString(const String *from, String *to) {
 }
 
 ErrorCode concatString(String *start, const String *end) {
+    String temp;
+    switch (copyString(start, &temp)) {
+        default:
+            break;
+        case INCORRECT_INPUT:
+            return INCORRECT_INPUT;
+        case MALLOC_ERROR:
+            return MALLOC_ERROR;
+    }
+    
+    //start->data = (char *) realloc(start->data, (start->len + end->len + 1) * sizeof(char));
+    start->data = (char *) realloc(start->data, (1) * sizeof(char));
+    if (start->data == NULL)
+        return MALLOC_ERROR;
 
+    int i;
+    for (i = 0; i < temp.len - 1; ++i) {
+        start->data[i] = temp.data[i];
+    }
+    --i;
+    for (int j = 0; j < end->len; ++j) {
+        ++i;
+        start->data[i] = end->data[j];
+    }
+    start->data[i + 1] = '\0';
+    start->len = start->len + end->len;
+    
+    switch (deleteString(&temp)) {
+        default:
+            break;
+        case INCORRECT_INPUT:
+            return INCORRECT_INPUT;
+    }
+    return SUCCESS;
 }
 
 int main() {
 
-    char input1[] = "hello f dfasg";
-    char input2[] = "xello f dfasg";
+    char input1[] = "123";
+    char input2[] = "456";
     //char *input2 = "hello f g";
     String str1;
     String str2;
 
     createString(&str1, input1);
-    deleteString(&str1);
-    deleteString(&str2);
     createString(&str2, input2);
     int bigger;
     compareSting(&str1, &str2, &bigger);
     printf("%d\n", bigger);
 
-    copyString(&str1, &str2);
+    //copyString(&str1, &str2);
+    concatString(&str1, &str2);
 
 
+    deleteString(&str1);
+    deleteString(&str2);
     return SUCCESS;
 }
