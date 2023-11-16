@@ -37,7 +37,7 @@ static const char* errorMessages[] = {
     "Неизвестная ошибка, что-то пошло не так 🫢"
 };
 
-struct msg_buffer {
+struct msgBuffer {
     long type;
     char text[BUFFER_SIZE];
 };
@@ -78,7 +78,7 @@ int main() {
         mode 0666 -> права на чтение и запись всем пользователям
         IPC_CREAT -> создание новой очереди, если ключа не существует
     */
-    struct msg_buffer message;
+    struct msgBuffer message;
 
     while (1) {
         // приём сообщений из очереди
