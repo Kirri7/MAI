@@ -165,9 +165,8 @@ int main() {
         }
     }
 
-    // проверять msgctl не будем, строка не исполняется
-    // msgctl(toServerQueue, IPC_RMID, NULL);
-    // msgctl(fromServerQueue, IPC_RMID, NULL);
+    // (void)msgctl(toServerQueue, IPC_RMID, NULL);
+    // (void)msgctl(fromServerQueue, IPC_RMID, NULL);
     return SUCCESS;
 }
 
