@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +34,7 @@ static const char* errorMessages[] = {
     "Не удалось открыть файл, грустно 😥",
     "Файл прочитан не полностью, грустно 😿",
     "Не удалось открыть очередь сообщений, грустно 😥",
-    "Очередь прочитана не полностью, грустно 😿",
+    "Очередь не читается, грустно 😿",
     "Не удалось удалить очередь сообщений, грустно 😥",
     "Проблемы с ключом 🗿",
     "Проблемки с запуском дочернего процесса 🐣",
@@ -52,25 +53,14 @@ struct User {
     int channel;
 };
 
+void handleSigchld(int signal);
+void generateMessage(char* answer, int answLen, char* messageTextPtr);
 void generateEmojiSymbol(char* output, size_t* i, char const *emoji, const size_t emjiSz);
 void generateEmojiSubsting(char* output, size_t* i, char* substring, int gapLen);
 void generateEmojiString(char* output, char left[3], char middle[1], char right[3]);
 ErrorCode userSession(int userId);
 ErrorCode removeQueue(key_t key);
 ErrorCode generateQueues(int channel, int tryes, int* fromServerQueue, int* toServerQueue);
-
-
-void generateMessage(char* answer, int answLen, char* messageTextPtr) {
-    if (answer == NULL || messageTextPtr == NULL)
-        return;
-    for (int i = 0; i < BUFFER_SIZE; ++i) {
-        if (i < answLen) {
-            messageTextPtr[i] = answer[i];
-        } else {
-            messageTextPtr[i] = '\0';
-        }
-    }
-}
 
 int main() {
     printf("🖥️ server:\n");
@@ -99,7 +89,11 @@ int main() {
     printf("Ожидание пока кто-нибудь зайдёт\n");
     fflush(stdout);
 
+    // обработка завершённых процессов в любое время исполнения
+    signal(SIGCHLD, handleSigchld); 
+
     while (1) {
+        sleep(2); // signal вызывает MESSAGES_READING_ERROR, ждём
         struct MsgBuffer message;
         switch (msgrcv(toServerQueue, &message, sizeof(message), 0, 0)) {
             default:
@@ -133,7 +127,7 @@ int main() {
             // отдельная сессия для каждого пользователя
             int pid = fork();
             if (pid == 0) {
-                //userSession(); // todo
+                userSession(userId);
                 return SUCCESS;
             } else if (pid == -1) {
                 printf("%s\n", errorMessages[FORK_ERROR]);
@@ -152,6 +146,60 @@ int main() {
 
     // (void)msgctl(toServerQueue, IPC_RMID, NULL);
     // (void)msgctl(fromServerQueue, IPC_RMID, NULL);
+    return SUCCESS;
+}
+
+ErrorCode generateQueues(int channel, int tryes, int* fromServerQueue, int* toServerQueue) {
+    if (toServerQueue == NULL || fromServerQueue == NULL)
+        return INCORRECT_INPUT;
+    if (channel <= 0 || channel > 255)
+        return INCORRECT_INPUT;
+    if (tryes > 5)
+        return RETRY_ERROR;
+
+    key_t toServerKey = ftok("server_key.txt", channel);
+    key_t fromServerKey = ftok("client_key.txt", channel);
+    if (toServerKey == -1 || fromServerKey == -1) {
+        return KEY_ERROR;
+    }
+
+    int tempToServerQueue = msgget(toServerKey, 0666 | IPC_CREAT | IPC_EXCL); // IPC_EXCL уничтожает канал, созданный клиентом
+    int tempFromServerQueue = msgget(fromServerKey, 0666 | IPC_CREAT | IPC_EXCL);
+    if (tempToServerQueue == -1 || tempFromServerQueue == -1) {
+        printf("Очереди уже существуют, удаляю...\n");
+        fflush(stdout);
+        ErrorCode code = SUCCESS;
+        switch (removeQueue(toServerKey)) {
+            default:
+                break;
+            case MESSAGES_OPENING_ERROR:
+                code = MESSAGES_OPENING_ERROR;
+                break;
+            case MESSAGES_REMOVE_ERROR:
+                code = MESSAGES_REMOVE_ERROR;
+                break;
+        }
+        switch (removeQueue(fromServerKey)) {
+            default:
+                break;
+            case MESSAGES_OPENING_ERROR:
+                code = MESSAGES_OPENING_ERROR;
+                break;
+            case MESSAGES_REMOVE_ERROR:
+                code = MESSAGES_REMOVE_ERROR;
+                break;
+        }
+        if (code != SUCCESS) {
+            printf("%s\n", errorMessages[code]);
+            fflush(stdout);
+            return code;
+        }
+        return generateQueues(channel, ++tryes, fromServerQueue, toServerQueue);
+    } else {
+        *toServerQueue = tempToServerQueue;
+        *fromServerQueue = tempFromServerQueue;
+    }
+
     return SUCCESS;
 }
 
@@ -188,10 +236,11 @@ ErrorCode userSession(int userId) {
     message.type = 1;
     int lineLen = sizeof(message.text);
     for (int i = 0; i < lineLen; ++i) message.text[i] = '\0';
-    int drawFlag = 0;
+    int drawFlag;
 
     while (1) {
-        switch (msgrcv(fromServerQueue, &message, sizeof(message), 0, 0)) {
+        usleep(70000); // имитация обработки
+        switch (msgrcv(toServerQueue, &message, sizeof(message), 0, 0)) {
             default:
                 break;
             case -1:
@@ -199,8 +248,10 @@ ErrorCode userSession(int userId) {
                 fflush(stdout);
                 return MESSAGES_READING_ERROR;
         }
-        printf("Запрос от пользователя: %s\n", message.text);
-        for (int i = 0; i < lineLen; ++i) message.text[i] = '\0';
+        printf("Запрос от пользователя %d: %s", userId, message.text);
+
+        if (message.type == 2)
+            return SUCCESS;
 
         drawFlag = 1;
         // take <obj>, put, move
@@ -214,14 +265,15 @@ ErrorCode userSession(int userId) {
         }
         else if (strcmp(command, "put") == 0)
         {
-            char* coast = rightCoast;
             if (boat[0] == '_') 
             {
                 drawFlag = 0;
                 char answer[] = "Лодка пуста";
                 int answLen = sizeof(answer);
                 (void)generateMessage(answer, answLen, message.text);
-            } else if (boat[1] == 'L') 
+            } 
+            char* coast = rightCoast;
+            if (boat[1] == 'L') 
             {
                 coast = leftCoast;
             } 
@@ -260,7 +312,7 @@ ErrorCode userSession(int userId) {
 
             char* coast = rightCoast;
             if (boat[1] == 'L') {
-                char* coast = leftCoast;
+                coast = leftCoast;
             }
 
             // take apple 🍏, goat 🐐, wolf 🐺, 
@@ -271,18 +323,18 @@ ErrorCode userSession(int userId) {
                 char answer[] = "Объект не указан";
                 int answLen = sizeof(answer);
                 (void)generateMessage(answer, answLen, message.text);
-            } else if (strcmp(command, "apple") == 0) {
+            } else if (strcmp(object, "apple") == 0 && coast[0] == 'A') {
                 boat[0] = 'A';
                 coast[0] = '_';
-            } else if (strcmp(command, "goat") == 0) {
+            } else if (strcmp(object, "goat") == 0 && coast[1] == 'G') {
                 boat[0] = 'G';
                 coast[1] = '_';
-            } else if (strcmp(command, "wolf") == 0) {
+            } else if (strcmp(object, "wolf") == 0 && coast[2] == 'W') {
                 boat[0] = 'W';
                 coast[2] = '_';
             } else {
                 drawFlag = 0;
-                char answer[] = "Объект не распознан";
+                char answer[] = "Этот объект не удалось взять";
                 int answLen = sizeof(answer);
                 (void)generateMessage(answer, answLen, message.text);
             }
@@ -300,7 +352,39 @@ ErrorCode userSession(int userId) {
             (void)generateMessage(answer, answLen, message.text);
         }   
 
-        switch (msgsnd(toServerQueue, &message, sizeof(message), 0)) {
+        int gameOver = 0;
+        for (int i = 0; i < 2; ++i) {
+            if (leftCoast[i] != '_' && leftCoast[i+1] != '_' && boat[1] == 'R') 
+                gameOver = 1;
+            if (rightCoast[i] != '_' && rightCoast[i+1] != '_' && boat[1] == 'L') 
+                gameOver = 1;
+        }
+        
+        if (gameOver) {
+            message.type = 2;
+            int i = 0;
+            for (; message.text[i] != '\0'; ++i) {}
+            char answer[] = "\n* Задание провалено *\n";
+            int answLen = sizeof(answer);
+            int j = 0;
+            for (; i < BUFFER_SIZE && j < answLen; ++i) {
+                message.text[i] = answer[j++];
+            }
+        }
+        int gameWin = (rightCoast[0] == 'A' && rightCoast[1] == 'G' && rightCoast[2] == 'W');
+        if (gameWin) {
+            message.type = 2;
+            int i = 0;
+            for (; message.text[i] != '\0'; ++i) {}
+            char answer[] = "\n* Задание выполнено *\n";
+            int answLen = sizeof(answer);
+            int j = 0;
+            for (; i < BUFFER_SIZE && j < answLen; ++i) {
+                message.text[i] = answer[j++];
+            }
+        }
+
+        switch (msgsnd(fromServerQueue, &message, sizeof(message), 0)) {
             default:
                 break;
             case -1:
@@ -309,6 +393,8 @@ ErrorCode userSession(int userId) {
                 return MESSAGES_SENDING_ERROR;
         }
         for (int i = 0; i < lineLen; ++i) message.text[i] = '\0';
+
+        if (gameOver || gameWin) return SUCCESS;
     }
 }
 
@@ -371,55 +457,31 @@ void generateEmojiString(char* output, char left[3], char middle[2], char right[
     if (i < BUFFER_SIZE) output[i] = '\0';
 }
 
-ErrorCode generateQueues(int channel, int tryes, int* fromServerQueue, int* toServerQueue) {
-    if (toServerQueue == NULL || fromServerQueue == NULL)
-        return INCORRECT_INPUT;
-    if (channel <= 0 || channel > 255)
-        return INCORRECT_INPUT;
-    if (tryes > 5)
-        return RETRY_ERROR;
-
-    key_t toServerKey = ftok("server_key.txt", channel);
-    key_t fromServerKey = ftok("client_key.txt", channel);
-    if (toServerKey == -1 || fromServerKey == -1) {
-        return KEY_ERROR;
+void generateMessage(char* answer, int answLen, char* messageTextPtr) {
+    if (answer == NULL || messageTextPtr == NULL)
+        return;
+    for (int i = 0; i < BUFFER_SIZE; ++i) {
+        if (i < answLen) {
+            messageTextPtr[i] = answer[i];
+        } else {
+            messageTextPtr[i] = '\0';
+        }
     }
+}
 
-    int tempToServerQueue = msgget(toServerKey, 0666 | IPC_CREAT);
-    int tempFromServerQueue = msgget(fromServerKey, 0666 | IPC_CREAT);
-    if (tempToServerQueue == -1 || tempFromServerQueue == -1) {
-        printf("Очереди уже существуют, удаляю...\n");
-        fflush(stdout);
-        ErrorCode code = SUCCESS;
-        switch (removeQueue(toServerKey)) {
-            default:
-                break;
-            case MESSAGES_OPENING_ERROR:
-                code = MESSAGES_OPENING_ERROR;
-                break;
-            case MESSAGES_REMOVE_ERROR:
-                code = MESSAGES_REMOVE_ERROR;
-                break;
-        }
-        switch (removeQueue(fromServerKey)) {
-            default:
-                break;
-            case MESSAGES_OPENING_ERROR:
-                code = MESSAGES_OPENING_ERROR;
-                break;
-            case MESSAGES_REMOVE_ERROR:
-                code = MESSAGES_REMOVE_ERROR;
-                break;
-        }
-        if (code != SUCCESS) {
-            printf("%s\n", errorMessages[code]);
-            fflush(stdout);
-            return code;
-        }
-        generateQueues(channel, ++tryes, fromServerQueue, toServerQueue);
+void handleSigchld(int signal) {
+    int status;
+    // pid_t child_pid;
+    waitpid(-1, &status, 0);
+
+    if (WIFEXITED(status)) { // макрос проверки заврешения по "собственной воле"
+        // printf небезопасен для сигналов
+        char answer[] = "Дочерний процесс завершился успешно\n";
+        size_t answLen = sizeof(answer);
+        write(STDOUT_FILENO, answer, answLen);
+    } else if (WIFSIGNALED(status)) { // условие прерывания сигналом
+        char answer[] = "Дочерний процесс завершился принудительно\n";
+        size_t answLen = sizeof(answer);
+        write(STDOUT_FILENO, answer, answLen);
     }
-
-    *toServerQueue = tempToServerQueue;
-    *fromServerQueue = tempFromServerQueue;
-    return SUCCESS;
 }
