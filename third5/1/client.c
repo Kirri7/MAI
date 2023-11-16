@@ -126,6 +126,7 @@ int main() {
         msgsnd(serverQueue, &message, sizeof(message), 0);
         /*
             msgp -> указатель на буфер сообщения для отправляемого сообщения
+            return int код отправки 0 или -1
         */
 
         for (int i = 0; i < BUFFER_SIZE; ++i) message.text[i] = '\0';
