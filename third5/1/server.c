@@ -37,7 +37,7 @@ static const char* errorMessages[] = {
     "Неизвестная ошибка, что-то пошло не так 🫢"
 };
 
-struct msgBuffer {
+struct MsgBuffer {
     long type;
     char text[BUFFER_SIZE];
 };
@@ -86,7 +86,7 @@ int main() {
         msgctl(clientQueue, IPC_RMID, NULL);
         return MESSAGES_OPENING_ERROR;
     }
-    struct msgBuffer message;
+    struct MsgBuffer message;
 
     while (1) {
         // приём сообщений из очереди

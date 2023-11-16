@@ -36,7 +36,7 @@ static const char* errorMessages[] = {
     "Неизвестная ошибка, что-то пошло не так 🫢"
 };
 
-struct msgBuffer {
+struct MsgBuffer {
     long type;
     char text[BUFFER_SIZE];
 };
@@ -84,7 +84,7 @@ int main() {
     }
 
     int cnt = 0;
-    struct msgBuffer message;
+    struct MsgBuffer message;
     char buffer[BUFFER_SIZE];
     for (int i = 0; i < BUFFER_SIZE; ++i) buffer[i] = '\0';
 
