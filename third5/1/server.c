@@ -78,6 +78,14 @@ int main() {
         mode 0666 -> права на чтение и запись всем пользователям
         IPC_CREAT -> создание новой очереди, если ключа не существует
     */
+
+    if (serverQueue == -1 || clientQueue == -1) {
+        printf("%s\n", errorMessages[MESSAGES_OPENING_ERROR]);
+        fflush(stdout);
+        msgctl(serverQueue, IPC_RMID, NULL); // закрытие очереди
+        msgctl(clientQueue, IPC_RMID, NULL);
+        return MESSAGES_OPENING_ERROR;
+    }
     struct msgBuffer message;
 
     while (1) {
