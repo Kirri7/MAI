@@ -70,7 +70,6 @@ int main(int argc, char *argv[]) {
 
     printf("⌨️ client:\n");
     fflush(stdout);
-    //int userId = 32; // todo
 
     ErrorCode code = auth(userId);
     switch (code) {
