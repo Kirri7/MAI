@@ -96,6 +96,7 @@ int main() {
             case -1:
                 printf("%s\n", errorMessages[MESSAGES_SENDING_ERROR]);
                 fflush(stdout);
+                (void)fclose(file);
                 return MESSAGES_SENDING_ERROR;
         }
         for (int i = 0; i < lineLen; ++i) message.text[i] = '\0';
@@ -106,15 +107,18 @@ int main() {
             case -1:
                 printf("%s\n", errorMessages[MESSAGES_READING_ERROR]);
                 fflush(stdout);
+                (void)fclose(file);
                 return MESSAGES_READING_ERROR;
         }
         printf("🖥️ -> %s\n", message.text);
         for (int i = 0; i < lineLen; ++i) message.text[i] = '\0';
 
         if (message.type == 2) {
+            (void)fclose(file);
             return SUCCESS;
         }
     }
+    (void)fclose(file);
 
     message.type = 2;
     switch (msgsnd(toServerQueue, &message, sizeof(message), 0)) {
