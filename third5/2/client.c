@@ -46,10 +46,31 @@ struct MsgBuffer {
 ErrorCode generateQueues(int channel, int tries, int* fromServerQueue, int* toServerQueue);
 ErrorCode auth(int userId);
 
-int main() {
+void printHelp() {
+    printf("client.exe userId filePath\n");
+    fflush(stdout);
+    
+}
+
+int main(int argc, char *argv[]) {
+    int userId;
+    switch (argc) {
+        default:
+            printHelp();
+            return SUCCESS;
+        case 3:
+            userId = atoi(argv[1]);
+            if (userId <= 0 || userId > 255) {
+                printf("Неправильный userId\n");
+                fflush(stdout);
+                return INCORRECT_INPUT;
+            }
+            break;
+    }
+
     printf("⌨️ client:\n");
     fflush(stdout);
-    int userId = 32; // todo
+    //int userId = 32; // todo
 
     ErrorCode code = auth(userId);
     switch (code) {
@@ -73,9 +94,7 @@ int main() {
             break;
     }
 
-
-    //fileIn = fopen(argv[1], "r");
-    FILE* file = fopen("commands1.txt", "r");
+    FILE* file = fopen(argv[1], "r");
     if (file == NULL) {
         printf("%s\n", errorMessages[FILE_OPENING_ERROR]);
         fflush(stdout);
