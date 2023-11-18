@@ -60,7 +60,7 @@ void generateEmojiSubsting(char* output, size_t* i, char* substring, int gapLen)
 void generateEmojiString(char* output, char left[3], char middle[1], char right[3]);
 ErrorCode userSession(int userId);
 ErrorCode removeQueue(key_t key);
-ErrorCode generateQueues(int channel, int tryes, int* fromServerQueue, int* toServerQueue);
+ErrorCode generateQueues(int channel, int tries, int* fromServerQueue, int* toServerQueue);
 
 int main() {
     printf("🖥️ server:\n");
@@ -149,12 +149,12 @@ int main() {
     return SUCCESS;
 }
 
-ErrorCode generateQueues(int channel, int tryes, int* fromServerQueue, int* toServerQueue) {
+ErrorCode generateQueues(int channel, int tries, int* fromServerQueue, int* toServerQueue) {
     if (toServerQueue == NULL || fromServerQueue == NULL)
         return INCORRECT_INPUT;
     if (channel <= 0 || channel > 255)
         return INCORRECT_INPUT;
-    if (tryes > 5)
+    if (tries > 5)
         return RETRY_ERROR;
 
     key_t toServerKey = ftok("server_key.txt", channel);
@@ -194,7 +194,7 @@ ErrorCode generateQueues(int channel, int tryes, int* fromServerQueue, int* toSe
             fflush(stdout);
             return code;
         }
-        return generateQueues(channel, ++tryes, fromServerQueue, toServerQueue);
+        return generateQueues(channel, ++tries, fromServerQueue, toServerQueue);
     } else {
         *toServerQueue = tempToServerQueue;
         *fromServerQueue = tempFromServerQueue;

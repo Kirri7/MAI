@@ -43,7 +43,7 @@ struct MsgBuffer {
     char text[BUFFER_SIZE];
 };
 
-ErrorCode generateQueues(int channel, int tryes, int* fromServerQueue, int* toServerQueue);
+ErrorCode generateQueues(int channel, int tries, int* fromServerQueue, int* toServerQueue);
 ErrorCode auth(int userId);
 
 int main() {
@@ -129,13 +129,13 @@ int main() {
     return 0;
 }
 
-ErrorCode generateQueues(int channel, int tryes, int* fromServerQueue, int* toServerQueue) {
+ErrorCode generateQueues(int channel, int tries, int* fromServerQueue, int* toServerQueue) {
     if (toServerQueue == NULL || fromServerQueue == NULL) {
         return INCORRECT_INPUT;
     }
     if (channel <= 0 || channel > 255)
         return INCORRECT_INPUT;
-    if (tryes > 5)
+    if (tries > 5)
         return RETRY_ERROR;
 
     key_t toServerKey = ftok("server_key.txt", channel);
@@ -148,7 +148,7 @@ ErrorCode generateQueues(int channel, int tryes, int* fromServerQueue, int* toSe
     int tempFromServerQueue = msgget(fromServerKey, 0666);
     if (tempToServerQueue == -1 || tempFromServerQueue == -1) {
         printf("Очереди ещё существуют, ждём...\n");
-        return generateQueues(channel, ++tryes, fromServerQueue, toServerQueue);
+        return generateQueues(channel, ++tries, fromServerQueue, toServerQueue);
     } else {
         *toServerQueue = tempToServerQueue;
         *fromServerQueue = tempFromServerQueue;
