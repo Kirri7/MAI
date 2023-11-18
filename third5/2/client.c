@@ -164,12 +164,8 @@ ErrorCode generateQueues(int channel, int tries, int* fromServerQueue, int* toSe
 ErrorCode auth(int userId) {
     int fromServerQueue, toServerQueue;
     ErrorCode code = generateQueues(1, 0, &fromServerQueue, &toServerQueue);
-    switch (code) {
-        default:
-            return code;
-        case SUCCESS:
-            break;
-    }
+    if (code != SUCCESS)
+        return code;
 
     struct MsgBuffer message;
 
@@ -177,18 +173,12 @@ ErrorCode auth(int userId) {
     printf("Авторизация как пользователь %ld...\n", message.type);
     fflush(stdout);
 
-    switch (msgsnd(toServerQueue, &message, sizeof(message), 0)) {
-        default:
-            break;
-        case -1:
-            return MESSAGES_SENDING_ERROR;
+    if (msgsnd(toServerQueue, &message, sizeof(message), 0) == -1) {
+        return MESSAGES_SENDING_ERROR;
     }
 
-    switch (msgrcv(fromServerQueue, &message, sizeof(message), message.type, 0)) {
-        default:
-            break;
-        case -1:
-            return MESSAGES_READING_ERROR;
+    if (msgrcv(fromServerQueue, &message, sizeof(message), message.type, 0) == -1) {
+        return MESSAGES_READING_ERROR;
     }
 
     if (strcmp(message.text, "Пользователь не найден") == 0) {
