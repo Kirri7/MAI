@@ -88,6 +88,14 @@ char peek(Stack* stack) {
     return stack->top->data;
 }
 
+void deleteStack(Stack* stack) {
+    while (stack->top != NULL) {
+        Node* temp = stack->top;
+        stack->top = stack->top->next;
+        free(temp);
+    }
+}
+
 int isoperator(char chr) {
     switch (chr) {
         default:
@@ -118,6 +126,14 @@ int opPr(char chr) {
     }
 }
 
+ErrorCode checkOutputOverflow(int i, char output[BUFFER_SIZE]) {
+    if (i >= BUFFER_SIZE-1) {
+        output[BUFFER_SIZE-1] = '\0';
+        return OVERFLOW_ERROR;
+    }
+    return SUCCESS;
+}
+
 ErrorCode shuntingYard(char input[], int inpLen, char output[BUFFER_SIZE]) {
     Stack stack;
     initStack(&stack);
@@ -125,8 +141,8 @@ ErrorCode shuntingYard(char input[], int inpLen, char output[BUFFER_SIZE]) {
     int j = 0;
 
     for (int i = 0; i < inpLen; ++i) {
-        if (j+1 == BUFFER_SIZE) {
-            output[j] = '\0';
+        if (checkOutputOverflow(j, output) != SUCCESS) {
+            deleteStack(&stack);
             return OVERFLOW_ERROR;
         }
         char chr = input[i];
@@ -154,6 +170,10 @@ ErrorCode shuntingYard(char input[], int inpLen, char output[BUFFER_SIZE]) {
                     opr2 = pop(&stack);
                     output[j++] = opr2;
                     output[j++] = ' ';
+                    if (checkOutputOverflow(j, output) != SUCCESS) {
+                        deleteStack(&stack);
+                        return OVERFLOW_ERROR;
+                    }
                     if (!isEmpty(&stack)) {
                         opr2 = peek(&stack);
                     } else {
@@ -169,6 +189,10 @@ ErrorCode shuntingYard(char input[], int inpLen, char output[BUFFER_SIZE]) {
                     opr2 = pop(&stack);
                     output[j++] = opr2;
                     output[j++] = ' ';
+                    if (checkOutputOverflow(j, output) != SUCCESS) {
+                        deleteStack(&stack);
+                        return OVERFLOW_ERROR;
+                    }
                     if (!isEmpty(&stack)) {
                         opr2 = peek(&stack);
                     } else {
@@ -189,6 +213,7 @@ ErrorCode shuntingYard(char input[], int inpLen, char output[BUFFER_SIZE]) {
                 output[j++] = ' ';
             }
             if (isEmpty(&stack)) {
+                deleteStack(&stack);
                 return OPEN_BRACE_MISSING;
             } else {
                 pop(&stack);
@@ -196,23 +221,28 @@ ErrorCode shuntingYard(char input[], int inpLen, char output[BUFFER_SIZE]) {
         }
         else if (!isspace(chr) && chr != '\0')
         {
+            deleteStack(&stack);
             return UNKNOWN_SYMBOL;
         }
     }
     while (!isEmpty(&stack))
     {
-        if (j+1 == BUFFER_SIZE) {
-            output[j] = '\0';
+        if (checkOutputOverflow(j, output) != SUCCESS) {
+            deleteStack(&stack);
             return OVERFLOW_ERROR;
         }
-        if (peek(&stack) == '(')
+        if (peek(&stack) == '(') {
+            deleteStack(&stack);
             return CLOSE_BRACE_MISSING;
+        }
 
         output[j++] = pop(&stack);
         output[j++] = ' ';
     }
     return SUCCESS;
 }
+
+
 
 int main() {
 
