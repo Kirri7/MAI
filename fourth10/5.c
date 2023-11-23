@@ -6,6 +6,7 @@
 */
 
 #include <ctype.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -20,6 +21,7 @@ typedef enum {
     OPEN_BRACE_MISSING,
     CLOSE_BRACE_MISSING,
     UNKNOWN_SYMBOL,
+    DIVISION_BY_ZERO,
     UNKNOWN_ERROR,
 } ErrorCode;
 
@@ -33,6 +35,7 @@ static const char* errorMessages[] = {
     "Месье, у Вас '(' пропала из выражения 🧐",
     "Месье, у Вас ')' пропала из выражения 🧐",
     "Месье, найден неопознанный символ в выражении 🧐",
+    "Месье, делить на ноль запрещенно 🧐",
     "Неизвестная ошибка, что-то пошло не так 🫢"
 };
 
@@ -47,7 +50,7 @@ typedef struct Stack {
     Node* top;
 } Stack;
 
-Node* createNode(char data) {
+Node* createNode(const char data) {
     Node* newNode = (Node*)malloc(sizeof(Node));
     newNode->data = data;
     newNode->next = NULL;
@@ -62,7 +65,7 @@ int isEmpty(Stack* stack) {
     return (stack->top == NULL);
 }
 
-void push(Stack* stack, char data) {
+void push(Stack* stack, const char data) {
     Node* newNode = createNode(data);
     newNode->next = stack->top;
     stack->top = newNode;
@@ -96,7 +99,7 @@ void deleteStack(Stack* stack) {
     }
 }
 
-int isoperator(char chr) {
+int isoperator(const char chr) {
     switch (chr) {
         default:
             return 0;
@@ -110,7 +113,7 @@ int isoperator(char chr) {
     }
 }
 
-int opPr(char chr) {
+int opPr(const char chr) {
     switch(chr) {
         default:
             return -1;
@@ -126,7 +129,7 @@ int opPr(char chr) {
     }
 }
 
-ErrorCode checkOutputOverflow(int i, char output[BUFFER_SIZE]) {
+ErrorCode checkOutputOverflow(const int i, char output[BUFFER_SIZE]) {
     if (i >= BUFFER_SIZE-1) {
         output[BUFFER_SIZE-1] = '\0';
         return OVERFLOW_ERROR;
@@ -134,7 +137,7 @@ ErrorCode checkOutputOverflow(int i, char output[BUFFER_SIZE]) {
     return SUCCESS;
 }
 
-ErrorCode shuntingYard(char input[], int inpLen, char output[BUFFER_SIZE]) {
+ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE]) {
     Stack stack;
     initStack(&stack);
     memset(output, '\0', BUFFER_SIZE);
@@ -219,7 +222,7 @@ ErrorCode shuntingYard(char input[], int inpLen, char output[BUFFER_SIZE]) {
                 pop(&stack);
             }
         }
-        else if (!isspace(chr) && chr != '\0')
+        else if (!isspace(chr) && chr != '\0' && chr != '\n')
         {
             deleteStack(&stack);
             return UNKNOWN_SYMBOL;
@@ -242,19 +245,189 @@ ErrorCode shuntingYard(char input[], int inpLen, char output[BUFFER_SIZE]) {
     return SUCCESS;
 }
 
+void calcExit(const char input[], const size_t inpLen, Stack *stack) {
+    deleteStack(stack);
+    // for (size_t i = 0; i < inpLen-1; ++i) {
+    //     if (input[i] == '\0') input[i] = ' ';
+    // }
+}
 
+ErrorCode calculate(const char input2[], const size_t inpLen, int *result) {
+    if (result == NULL)
+        return INCORRECT_INPUT;
+    Stack stack;
+    initStack(&stack);
+    char input[BUFFER_SIZE];
+    for (size_t i = 0; i < inpLen; ++i)
+        input[i] = input2[i];
 
-int main() {
+    char *token = strtok(input, " ");
+    while (token != NULL) {
+        if (isdigit(token[0])) {
+            char *endptr;
+            long num = strtol(token, &endptr, 10);
+            if (*endptr != '\0') {
+                calcExit(input, inpLen, &stack);
+                return INCORRECT_INPUT;
+            }
+            push(&stack, (int)num);
+        } else {
+            if (isEmpty(&stack)) {
+                calcExit(input, inpLen, &stack);
+                return INCORRECT_INPUT;
+            }
+            int operand2 = pop(&stack);
+            if (isEmpty(&stack)) {
+                calcExit(input, inpLen, &stack);
+                return INCORRECT_INPUT;
+            }
+            int operand1 = pop(&stack);
+            int res;
+            switch (token[0]) {
+                case '+':
+                    res = operand1 + operand2;
+                    break;
+                case '-':
+                    res = operand1 - operand2;
+                    break;
+                case '*':
+                    res = operand1 * operand2;
+                    break;
+                case '/':
+                    if (operand2 == 0) {
+                        calcExit(input, inpLen, &stack);
+                        return DIVISION_BY_ZERO;
+                    }
+                    res = operand1 / operand2;
+                    break;
+                case '%':
+                    if (operand2 == 0) {
+                        calcExit(input, inpLen, &stack);
+                        return DIVISION_BY_ZERO;
+                    }
+                    res = operand1 % operand2;
+                    break;
+                case '^':
+                    res = 1;
+                    for (int i = 0; i < operand2; ++i) {
+                        res *= operand1;
+                    }
+                    break;
+                default:
+                    calcExit(input, inpLen, &stack);
+                    return INCORRECT_INPUT;
+            }
+            push(&stack, res);
+        }
+        token = strtok(NULL, " ");
+    }
 
-    char input[] = "2 + 1%0";
-    int inpLen = sizeof(input);
+    if (isEmpty(&stack)) {
+        calcExit(input, inpLen, &stack);
+        return INCORRECT_INPUT;
+    }
+    *result = pop(&stack);
+    if (!isEmpty(&stack)) {
+        calcExit(input, inpLen, &stack);
+        return INCORRECT_INPUT;
+    }
 
-    char output[BUFFER_SIZE];
+    calcExit(input, inpLen, &stack);
+    return SUCCESS;
+}
 
-    ErrorCode code = shuntingYard(input, inpLen, output);
+ErrorCode openOutputFile(const char inputFile[], const int fileExists, FILE** file) {
+    size_t inputLen = strnlen(inputFile, BUFFER_SIZE);
+    if (inputLen >= BUFFER_SIZE - 7) {
+        return INCORRECT_INPUT;
+    }
 
+    char outputFile[BUFFER_SIZE];
+    strncpy(outputFile, inputFile, inputLen);
+    strncpy(outputFile + inputLen, ".output", 7);
 
+    if (fileExists) {
+        *file = fopen(outputFile, "a");
+    } else {
+        *file = fopen(outputFile, "w");
+    }
+    if (*file == NULL) {
+        return FILE_OPENING_ERROR;
+    }
 
+    return SUCCESS;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc < 2) {
+        printf("%s <file1> <file2> ... <fileN>\n", argv[0]);
+        return INCORRECT_INPUT;
+    }
+
+    for (int i = 1; i < argc; ++i) {
+        FILE *file = fopen(argv[i], "r");
+        if (file == NULL) {
+            printf("%s: %s\n", argv[i], errorMessages[FILE_OPENING_ERROR]);
+            continue;
+        }
+        printf("📄 Файл: %s\n", argv[i]);
+        fflush(stdout);
+
+        char line[BUFFER_SIZE];
+        size_t lineLen = sizeof(line);
+        memset(line, '\0', lineLen);
+        int lineNum = 0;
+        int hasOutFile = 0;
+        while (fgets(line, sizeof(line), file) != NULL) {
+            char output[BUFFER_SIZE];
+            size_t outLen = sizeof(output);
+            int res;
+            printf(" Исходное: %s", line);
+
+            ErrorCode problem = shuntingYard(line, lineLen, output);
+            if (problem != SUCCESS) {
+                FILE *out;
+                ErrorCode code = openOutputFile(argv[i], hasOutFile, &out);
+                switch (code) {
+                    default:
+                        fclose(file);
+                        return code;
+                    case SUCCESS:
+                        hasOutFile = 1;
+                        break;
+                }
+                fprintf(out, "выражение %d: %s -> ошибка '%s'\n", lineNum, line, errorMessages[problem]);
+                fflush(out);
+                fclose(out);
+            } else {
+                printf(" Обр-Поль: %s\n", output);
+
+                problem = calculate(output, outLen, &res);
+                if (problem != SUCCESS) {
+                    FILE *out;
+                    ErrorCode code = openOutputFile(argv[i], hasOutFile, &out);
+                    switch (code) {
+                        default:
+                            fclose(file);
+                            return code;
+                        case SUCCESS:
+                            hasOutFile = 1;
+                            break;
+                    }
+                    fprintf(out, "выражение %d: %s -> ошибка '%s'\n", lineNum, line, errorMessages[problem]);
+                    fflush(out);
+                    fclose(out);
+                } else {
+                    printf(" = %d\n\n", res);
+                }
+            }
+
+            memset(line, '\0', lineLen);
+            ++lineNum;
+        }
+
+        fclose(file);
+    }
 
     return SUCCESS;
 }
