@@ -42,7 +42,7 @@ static const char* errorMessages[] = {
 #define BUFFER_SIZE 100
 
 typedef struct Node {
-    char data;
+    int data;
     struct Node* next;
 } Node;
 
@@ -50,7 +50,7 @@ typedef struct Stack {
     Node* top;
 } Stack;
 
-Node* createNode(const char data) {
+Node* createNode(const int data) {
     Node* newNode = (Node*)malloc(sizeof(Node));
     newNode->data = data;
     newNode->next = NULL;
@@ -65,13 +65,13 @@ int isEmpty(Stack* stack) {
     return (stack->top == NULL);
 }
 
-void push(Stack* stack, const char data) {
+void push(Stack* stack, const int data) {
     Node* newNode = createNode(data);
     newNode->next = stack->top;
     stack->top = newNode;
 }
 
-char pop(Stack* stack) {
+int pop(Stack* stack) {
     if (isEmpty(stack)) {
         printf("Стек пуст 🪣\n");
         return -1;
@@ -83,7 +83,7 @@ char pop(Stack* stack) {
     return poppedData;
 }
 
-char peek(Stack* stack) {
+int peek(Stack* stack) {
     if (isEmpty(stack)) {
         printf("Стек пуст 🪣\n");
         return -1;
