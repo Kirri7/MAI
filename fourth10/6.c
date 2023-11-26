@@ -297,12 +297,6 @@ ErrorCode convertToExpressionTree(char* expression, struct Node** result) {
     char* token = strtok(expression, " ");
     while (token != NULL) {
         if (isdigit(token[0]) || isalpha(token[0])) {
-            //todo проверка на многосимвольность
-            // char *endptr;
-            // int num = strtol(token, &endptr, 10);
-            // if (*endptr != '\0') 
-            //     return atExit(INCORRECT_INPUT, stack[0]);
-            
             struct Node* newNode = createNode(token[0], 1);
             if (newNode == NULL)
                 return atExit(MALLOC_ERROR, stack[0]);
