@@ -359,7 +359,6 @@ ErrorCode openOutputFile(const char inputFile[], const int fileExists, FILE** fi
 }
 
 int main(int argc, char *argv[]) {
-    //todo перенести функции вниз, написать прототипы
     if (argc < 2) {
         printf("%s <file1> <file2> ... <fileN>\n", argv[0]);
         return INCORRECT_INPUT;
