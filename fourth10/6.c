@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
 
 typedef enum {
     SUCCESS = 0,
@@ -93,33 +94,37 @@ void deleteStack(Stack* stack) {
 }
 
 int isoperator(const char chr) {
-    // todo
     switch (chr) {
         default:
             return 0;
-        case '+':
-        case '-':
-        case '*':
-        case '/':
-        case '%':
-        case '^':
+        case '&':
+        case '|':
+        case '~':
+        case '-': // ->
+        case '+': // +>
+        case '<': // <>
+        case '=':
+        case '!':
+        case '?':
             return 1;
     }
 }
 
 int opPr(const char chr) {
-    // todo
     switch(chr) {
         default:
             return -1;
-        case '+':
+        case '|':
         case '-':
+        case '<':
+        case '=':
             return 1;
-        case '*':
-        case '/':
-        case '%':
+        case '?':
+        case '!':
+        case '+':
+        case '&':
             return 2;
-        case '^':
+        case '~':
             return 3;
     }
 }
@@ -145,14 +150,18 @@ ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE])
         }
         char chr = input[i];
 
-        if (isdigit(chr)) 
+        if (isdigit(chr) || isalpha(chr)) 
         {
-            output[j++] = chr;
-            while (isdigit(input[++i])) {
-                output[j++] = input[i];
+            if (isdigit(input[i+1]) || isalpha(input[i+1])) {
+                deleteStack(&stack);
+                return INCORRECT_INPUT;
             }
+            output[j++] = chr;
+            // while (isdigit(input[++i]) || isalpha(input[i])) {
+            //     output[j++] = input[i];
+            // }
+            // --i;
             output[j++] = ' ';
-            --i;
             continue;
         } 
         else if (isoperator(chr)) 
@@ -161,8 +170,9 @@ ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE])
             char opr2 = ' ';
             if (!isEmpty(&stack))
                 opr2 = peek(&stack);
-            if (opr1 != '^') 
-            {   // правоассоциативность
+            
+            // if (opr1 != '^') все операции левоассоциативны
+            {   // левоассоциативность
                 while (!isEmpty(&stack) && opPr(opr1) <= opPr(opr2) && isoperator(opr2)) 
                 {
                     opr2 = pop(&stack);
@@ -180,25 +190,25 @@ ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE])
                 }
                 push(&stack, opr1);
             }
-            else 
-            {   // левоассоциативность
-                while (!isEmpty(&stack) &&opPr(opr1) < opPr(opr2) && isoperator(opr2))
-                {
-                    opr2 = pop(&stack);
-                    output[j++] = opr2;
-                    output[j++] = ' ';
-                    if (checkOutputOverflow(j, output) != SUCCESS) {
-                        deleteStack(&stack);
-                        return OVERFLOW_ERROR;
-                    }
-                    if (!isEmpty(&stack)) {
-                        opr2 = peek(&stack);
-                    } else {
-                        break;
-                    }
-                }
-                push(&stack, opr1);
-            }
+            // else 
+            // {   // правоассоциативность
+            //     while (!isEmpty(&stack) &&opPr(opr1) < opPr(opr2) && isoperator(opr2))
+            //     {
+            //         opr2 = pop(&stack);
+            //         output[j++] = opr2;
+            //         output[j++] = ' ';
+            //         if (checkOutputOverflow(j, output) != SUCCESS) {
+            //             deleteStack(&stack);
+            //             return OVERFLOW_ERROR;
+            //         }
+            //         if (!isEmpty(&stack)) {
+            //             opr2 = peek(&stack);
+            //         } else {
+            //             break;
+            //         }
+            //     }
+            //     push(&stack, opr1);
+            // }
         }
         else if (chr == '(')
         {
@@ -241,7 +251,7 @@ ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE])
 }
 
 struct Node {
-    int data;
+    char data;
     int isNumber;
     struct Node* left;
     struct Node* right;
@@ -271,7 +281,7 @@ void inorderTraversal(struct Node* root) {
     if (root == NULL)
         return;
     inorderTraversal(root->left);
-    printf("%d ", root->data);
+    printf("%c ", root->data);
     inorderTraversal(root->right);
 }
 
@@ -286,13 +296,14 @@ ErrorCode convertToExpressionTree(char* expression, struct Node** result) {
     int top = -1;
     char* token = strtok(expression, " ");
     while (token != NULL) {
-        if (isdigit(token[0])) {
-            char *endptr;
-            int num = strtol(token, &endptr, 10);
-            if (*endptr != '\0') 
-                return atExit(INCORRECT_INPUT, stack[0]);
+        if (isdigit(token[0]) || isalpha(token[0])) {
+            //todo проверка на многосимвольность
+            // char *endptr;
+            // int num = strtol(token, &endptr, 10);
+            // if (*endptr != '\0') 
+            //     return atExit(INCORRECT_INPUT, stack[0]);
             
-            struct Node* newNode = createNode(num, 1);
+            struct Node* newNode = createNode(token[0], 1);
             if (newNode == NULL)
                 return atExit(MALLOC_ERROR, stack[0]);
             
@@ -320,17 +331,161 @@ ErrorCode convertToExpressionTree(char* expression, struct Node** result) {
     return SUCCESS;
 }
 
+int evaluateNode(const struct Node* node, const int* input) {
+    if (node->isNumber && isdigit(node->data)) {
+        return node->data - '0';
+    }
+    else if (node->isNumber) {
+        return input[node->data - 'A'];
+    } 
+    else {
+        int left = evaluateNode(node->left, input);
+        int right = evaluateNode(node->right, input);
+        switch (node->data) {
+            // ru.cppreference.com/w/cpp/language/operator_precedence
+            // ~0 не эквивалентно !0
+            // & <=> &&
+            // | <=> ||
+            case '&':
+                return left & right;
+            case '|':
+                return left | right;
+            case '~':
+                return !left;
+            case '-': // ->
+                return !left | right;
+            case '+': // +>
+                // коимпликация (инверсия обратной импликации)
+                return !( left | !right );
+            case '<': // <>
+                return left ^ right;
+            case '=':
+                return (left & right) | (!left & !right);
+            case '!':
+                return !(left & right);
+            case '?':
+                return !(left | right);
+            default:
+                break;
+        }
+    }
+    return -1;
+}
 
-int main() {
-    char expression[] = "12 25 + 3 * ";
+ErrorCode printTruthTable(const struct Node* root, const int numVariables, FILE* file) {
+    // numVariables: A -> Z
+    if (numVariables < 1 || numVariables > 26)
+        return INCORRECT_INPUT;
+
+    int input[26];
+    for (int i = 0; i < numVariables; ++i) {
+        fprintf(file, "%c ", 'A' + i);
+    }
+    fprintf(file, "=> Значение\n");
+    for (int i = 0; i < (1 << numVariables); ++i) {
+        for (int j = 0; j < numVariables; ++j) {
+            // ABCD...Z <-> [1011...1]
+            input[j] = (i >> (numVariables-1 - j)) & 1;
+            fprintf(file, "%d ", input[j]);
+        }
+        fprintf(file, "=> %d\n", evaluateNode(root, input));
+    }
+    fflush(file);
+    return SUCCESS;
+}
+
+ErrorCode compressOperators(char string[], size_t strLen) {
+    for (size_t i = 0; i < strLen-1; ++i) {
+        if (string[i] == '<' && string[i+1] != '>') {
+            return INCORRECT_INPUT;
+        } else if (string[i] == '-' && string[i+1] != '>') {
+            return INCORRECT_INPUT;
+        } else if (string[i] == '+' && string[i+1] != '>') {
+            return INCORRECT_INPUT;
+        } else if (string[i+1] == '>') {
+            string[i+1] = ' ';
+        }
+    }
+    return SUCCESS;
+}
+
+char generateRandomChar() {
+    char charset[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    return charset[rand() % (sizeof(charset)-1)];
+}
+
+void generateRandomFileName(char *fileName, size_t nameLen) {
+    for (size_t i = 0; i < nameLen-5; ++i) {
+        fileName[i] = generateRandomChar();
+    }
+    char ending[] = ".txt";
+    for (size_t i = nameLen-5; i < nameLen; ++i) {
+        fileName[i] = ending[i-(nameLen-5)];
+    }
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("%s <file>\n", argv[0]);
+        return INCORRECT_INPUT;
+    }
+
+    FILE *file = fopen(argv[1], "r");
+    if (file == NULL) {
+        printf("%s\n", errorMessages[FILE_OPENING_ERROR]);
+        fflush(stdout);
+        return FILE_OPENING_ERROR;
+    }
+
+    char line[BUFFER_SIZE];
+    size_t lineLen = sizeof(line);
+    memset(line, '\0', lineLen);
+    if (fgets(line, sizeof(line), file) == NULL) {
+        fclose(file);
+        printf("%s\n", errorMessages[INCORRECT_INPUT]);
+        fflush(stdout);
+        return INCORRECT_INPUT;
+    }
+    fclose(file);
+
+    printf("'%s'\n", line);
+    fflush(stdout);
+
+    if (compressOperators(line, lineLen) != SUCCESS) {
+        printf("%s\n", errorMessages[INCORRECT_INPUT]);
+        fflush(stdout);
+        return INCORRECT_INPUT;
+    }
+    
+    char expression[BUFFER_SIZE];
+    ErrorCode code = shuntingYard(line, sizeof(line), expression);
+    if (code != SUCCESS) {
+        printf("%s\n", errorMessages[code]);
+        fflush(stdout);
+        return code;
+    }
+
+    printf("'%s'\n", expression);
+    fflush(stdout);
     struct Node* root;
     convertToExpressionTree(expression, &root);
 
-    printf("Inorder Traversal: ");
-    inorderTraversal(root);
-    printf("\n");
+    char fileName[10];
+    srand(time(NULL));
+    generateRandomFileName(fileName, sizeof(fileName));
+    printf("'%s'\n", fileName);
+    fflush(stdout);
+
+    FILE *out = fopen(fileName, "w");
+    if (out == NULL) {
+        printf("%s\n", errorMessages[FILE_OPENING_ERROR]);
+        fflush(stdout);
+        destroyTree(root);
+        return FILE_OPENING_ERROR;
+    }
+    printTruthTable(root, 4, out);
+    fclose(out);
 
     destroyTree(root);
-
     return 0;
 }
