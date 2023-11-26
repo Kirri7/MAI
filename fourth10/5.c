@@ -167,7 +167,7 @@ ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE])
             if (!isEmpty(&stack))
                 opr2 = peek(&stack);
             if (opr1 != '^') 
-            {   // правоассоциативность
+            {   // левоассоциативность
                 while (!isEmpty(&stack) && opPr(opr1) <= opPr(opr2) && isoperator(opr2)) 
                 {
                     opr2 = pop(&stack);
@@ -186,7 +186,7 @@ ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE])
                 push(&stack, opr1);
             }
             else 
-            {   // левоассоциативность
+            {   // правоассоциативность
                 while (!isEmpty(&stack) &&opPr(opr1) < opPr(opr2) && isoperator(opr2))
                 {
                     opr2 = pop(&stack);
@@ -359,6 +359,7 @@ ErrorCode openOutputFile(const char inputFile[], const int fileExists, FILE** fi
 }
 
 int main(int argc, char *argv[]) {
+    //todo перенести функции вниз, написать прототипы
     if (argc < 2) {
         printf("%s <file1> <file2> ... <fileN>\n", argv[0]);
         return INCORRECT_INPUT;
@@ -385,24 +386,8 @@ int main(int argc, char *argv[]) {
             printf(" Исходное: %s", line);
 
             ErrorCode problem = shuntingYard(line, lineLen, output);
-            if (problem != SUCCESS) {
-                FILE *out;
-                ErrorCode code = openOutputFile(argv[i], hasOutFile, &out);
-                switch (code) {
-                    default:
-                        fclose(file);
-                        return code;
-                    case SUCCESS:
-                        hasOutFile = 1;
-                        break;
-                }
-                fprintf(out, "выражение %d: %s -> ошибка '%s'\n", lineNum, line, errorMessages[problem]);
-                fflush(out);
-                fclose(out);
-            } else {
-                printf(" Обр-Поль: %s\n", output);
 
-                problem = calculate(output, outLen, &res);
+            for (int i = 1; i <= 2; ++i) {
                 if (problem != SUCCESS) {
                     FILE *out;
                     ErrorCode code = openOutputFile(argv[i], hasOutFile, &out);
@@ -417,7 +402,10 @@ int main(int argc, char *argv[]) {
                     fprintf(out, "выражение %d: %s -> ошибка '%s'\n", lineNum, line, errorMessages[problem]);
                     fflush(out);
                     fclose(out);
-                } else {
+                    break;
+                } else if (i == 1) {
+                    printf(" Обр-Поль: %s\n", output);
+                } else if (i == 2) {
                     printf(" = %d\n\n", res);
                 }
             }
