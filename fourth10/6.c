@@ -347,14 +347,14 @@ int evaluateNode(const struct Node* node, const int* input) {
             case '~':
                 return !left;
             case '-': // ->
-                return !left | right;
+                return (!left) | right;
             case '+': // +>
                 // коимпликация (инверсия обратной импликации)
-                return !( left | !right );
+                return !( left | (!right) );
             case '<': // <>
                 return left ^ right;
             case '=':
-                return (left & right) | (!left & !right);
+                return (left & right) | ((!left) & (!right));
             case '!':
                 return !(left & right);
             case '?':
