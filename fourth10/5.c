@@ -51,7 +51,7 @@ typedef struct Stack {
 } Stack;
 
 Node* createNode(const int data) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
+    Node* newNode = (Node*)malloc(sizeof(Node)); 
     newNode->data = data;
     newNode->next = NULL;
     return newNode;
@@ -337,14 +337,18 @@ ErrorCode calculate(const char input2[], const size_t inpLen, int *result) {
 }
 
 ErrorCode openOutputFile(const char inputFile[], const int fileExists, FILE** file) {
-    size_t inputLen = strnlen(inputFile, BUFFER_SIZE);
-    if (inputLen >= BUFFER_SIZE - 7) {
+    if (inputFile == NULL)
+        return INCORRECT_INPUT;
+    size_t inputLen = strnlen(inputFile, BUFFER_SIZE); // без \0
+    size_t extenLen = sizeof(".output"); // с \0
+    if (inputLen > BUFFER_SIZE - extenLen) { 
         return INCORRECT_INPUT;
     }
 
     char outputFile[BUFFER_SIZE];
+    memset(outputFile, '\0', BUFFER_SIZE);
     strncpy(outputFile, inputFile, inputLen);
-    strncpy(outputFile + inputLen, ".output", 7);
+    strncpy(outputFile + inputLen, ".output", extenLen);
 
     if (fileExists) {
         *file = fopen(outputFile, "a");
@@ -386,7 +390,7 @@ int main(int argc, char *argv[]) {
 
             ErrorCode problem = shuntingYard(line, lineLen, output);
 
-            for (int i = 1; i <= 2; ++i) {
+            for (int j = 1; j <= 2; ++j) {
                 if (problem != SUCCESS) {
                     FILE *out;
                     ErrorCode code = openOutputFile(argv[i], hasOutFile, &out);
@@ -402,9 +406,10 @@ int main(int argc, char *argv[]) {
                     fflush(out);
                     fclose(out);
                     break;
-                } else if (i == 1) {
+                } else if (j == 1) {
                     printf(" Обр-Поль: %s\n", output);
-                } else if (i == 2) {
+                    problem = calculate(output, outLen, &res);
+                } else if (j == 2) {
                     printf(" = %d\n\n", res);
                 }
             }
