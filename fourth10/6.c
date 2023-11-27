@@ -34,6 +34,7 @@ static const char* errorMessages[] = {
 };
 
 #define BUFFER_SIZE 100
+#define ALP_SIZE 26
 
 typedef struct SNode {
     int data;
@@ -137,11 +138,16 @@ ErrorCode checkOutputOverflow(const int i, char output[BUFFER_SIZE]) {
     return SUCCESS;
 }
 
-ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE]) {
+ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE], int* varCnt, int varOrder[ALP_SIZE]) {
+    if (varCnt == NULL) 
+        return INCORRECT_INPUT;
     Stack stack;
     initStack(&stack);
     memset(output, '\0', BUFFER_SIZE);
+    *varCnt = 0;
+    memset(varOrder, 0, ALP_SIZE * sizeof(int));
     int j = 0;
+    
 
     for (int i = 0; i < inpLen; ++i) {
         if (checkOutputOverflow(j, output) != SUCCESS) {
@@ -156,16 +162,22 @@ ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE])
                 deleteStack(&stack);
                 return INCORRECT_INPUT;
             }
+            chr = toupper(chr);
+            if (isalpha(chr) && !varOrder[chr-'A']) {
+                varOrder[chr-'A'] = *varCnt + 1;
+                chr = 'A' + (*varCnt)++;
+                // ++*varCnt;
+            }
             output[j++] = chr;
-            // while (isdigit(input[++i]) || isalpha(input[i])) {
-            //     output[j++] = input[i];
-            // }
-            // --i;
             output[j++] = ' ';
             continue;
         } 
         else if (isoperator(chr)) 
         {
+            if (chr == '~') {
+                output[j++] = '_';
+                output[j++] = ' ';
+            }
             char opr1 = chr;
             char opr2 = ' ';
             if (!isEmpty(&stack))
@@ -296,7 +308,7 @@ ErrorCode convertToExpressionTree(char* expression, struct Node** result) {
     int top = -1;
     char* token = strtok(expression, " ");
     while (token != NULL) {
-        if (isdigit(token[0]) || isalpha(token[0])) {
+        if (isdigit(token[0]) || isalpha(token[0]) || token[0] == '_') {
             struct Node* newNode = createNode(token[0], 1);
             if (newNode == NULL)
                 return atExit(MALLOC_ERROR, stack[0]);
@@ -325,9 +337,13 @@ ErrorCode convertToExpressionTree(char* expression, struct Node** result) {
     return SUCCESS;
 }
 
-int evaluateNode(const struct Node* node, const int* input) {
+int evaluateNode(const struct Node* node, const int input[ALP_SIZE]) {
+    if (node == NULL) return -1;
     if (node->isNumber && isdigit(node->data)) {
         return node->data - '0';
+    }
+    else if (node->data == '_') {
+        return -1;
     }
     else if (node->isNumber) {
         return input[node->data - 'A'];
@@ -345,7 +361,7 @@ int evaluateNode(const struct Node* node, const int* input) {
             case '|':
                 return left | right;
             case '~':
-                return !left;
+                return !right; // '_' всегда справа
             case '-': // ->
                 return (!left) | right;
             case '+': // +>
@@ -368,14 +384,11 @@ int evaluateNode(const struct Node* node, const int* input) {
 
 ErrorCode printTruthTable(const struct Node* root, const int numVariables, FILE* file) {
     // numVariables: A -> Z
-    if (numVariables < 1 || numVariables > 26)
+    if (numVariables < 1 || numVariables > ALP_SIZE)
         return INCORRECT_INPUT;
 
-    int input[26];
-    for (int i = 0; i < numVariables; ++i) {
-        fprintf(file, "%c ", 'A' + i);
-    }
-    fprintf(file, "=> Значение\n");
+    int input[ALP_SIZE];
+
     for (int i = 0; i < (1 << numVariables); ++i) {
         for (int j = 0; j < numVariables; ++j) {
             // ABCD...Z <-> [1011...1]
@@ -452,7 +465,9 @@ int main(int argc, char *argv[]) {
     }
     
     char expression[BUFFER_SIZE];
-    ErrorCode code = shuntingYard(line, sizeof(line), expression);
+    int varOrder[ALP_SIZE];
+    int varCnt;
+    ErrorCode code = shuntingYard(line, sizeof(line), expression, &varCnt, varOrder);
     if (code != SUCCESS) {
         printf("%s\n", errorMessages[code]);
         fflush(stdout);
@@ -462,7 +477,12 @@ int main(int argc, char *argv[]) {
     printf("'%s'\n", expression);
     fflush(stdout);
     struct Node* root;
-    convertToExpressionTree(expression, &root);
+    code = convertToExpressionTree(expression, &root);
+    if (code != SUCCESS) {
+        printf("%s\n", errorMessages[code]);
+        fflush(stdout);
+        return code;
+    }
 
     char fileName[10];
     srand(time(NULL));
@@ -477,9 +497,26 @@ int main(int argc, char *argv[]) {
         destroyTree(root);
         return FILE_OPENING_ERROR;
     }
-    printTruthTable(root, 4, out);
+
+    for (int i = 1; i <= ALP_SIZE; ++i) { // вывести букву порядка i
+        for (int j = 0; j < ALP_SIZE; ++j) { // найти букву порядка i
+            if (varOrder[j] == i) {
+                fprintf(file, "%c ", 'A' + j);
+                break;
+            }
+        }
+    }
+    fprintf(file, "=> Значение\n");
+    code = printTruthTable(root, varCnt, out);
+    if (code != SUCCESS) {
+        printf("%s\n", errorMessages[code]);
+        fflush(stdout);
+        destroyTree(root);
+        fclose(out);
+        return code;
+    }
     fclose(out);
 
     destroyTree(root);
-    return 0;
+    return 0; 
 }
