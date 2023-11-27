@@ -51,7 +51,9 @@ typedef struct Stack {
 } Stack;
 
 Node* createNode(const int data) {
-    Node* newNode = (Node*)malloc(sizeof(Node)); 
+    Node* newNode = (Node*)malloc(sizeof(Node));
+    if (newNode == NULL)
+        return NULL;
     newNode->data = data;
     newNode->next = NULL;
     return newNode;
@@ -67,6 +69,8 @@ int isEmpty(Stack* stack) {
 
 void push(Stack* stack, const int data) {
     Node* newNode = createNode(data);
+    if (newNode == NULL)
+        return;
     newNode->next = stack->top;
     stack->top = newNode;
 }
