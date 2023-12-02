@@ -23,7 +23,7 @@ double integrate(int fNumber, int n);
 
 int main(int argc, char *argv[]) {
     
-    if (strcmp(argv[1], "-h") == 0) {
+    if (argc > 1 && strcmp(argv[1], "-h") == 0) {
         printHelp();
         return 0;
     } else if (argc == 3 && strcmp(argv[1], "-e") == 0) {
