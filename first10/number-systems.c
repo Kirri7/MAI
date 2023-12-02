@@ -23,8 +23,8 @@ int defineBase(const char* str) {
 }
 
 int fromDecimal(int decimal, int base, char** res) {
-    if (2 > base || base > 32) {
-        printf("Это не база: она от 2 до 32 🗿\n");
+    if (2 > base || base > 36) {
+        printf("Это не база: она от 2 до 36 🗿\n");
         return 1;
     }
 
@@ -69,8 +69,8 @@ int fromDecimal(int decimal, int base, char** res) {
 }
 
 int handmadeStrtoi(const char* str, char** endptr, int base, int* ovrflw) {
-    if (2 > base || base > 32) {
-        printf("Это не база: она от 2 до 32 🗿\n");
+    if (2 > base || base > 36) {
+        printf("Это не база: она от 2 до 36 🗿\n");
         *ovrflw = 1;
         return 0;
     }
