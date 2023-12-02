@@ -142,7 +142,6 @@ int main(int argc, char *argv[]) {
             }
         }
     }
-    // todo strlen flagArg[3...]
     else if (flag == 's') 
     {
         int cnt = 0;
