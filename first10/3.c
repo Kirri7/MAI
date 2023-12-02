@@ -93,28 +93,28 @@ int main(int argc, char *argv[]) {
             return INCORRECT_INPUT;
         }
         char* endptr;
-        int epsilon = strtof(argv[2], &endptr);
+        float epsilon = strtof(argv[2], &endptr);
         if (*endptr != '\0' && *endptr != '\n') 
         {
             printf("Некорректный ввод\n");
             fflush(stdout);
             return INCORRECT_INPUT;
         }
-        int a = strtof(argv[3], &endptr);
+        float a = strtof(argv[3], &endptr);
         if (*endptr != '\0' && *endptr != '\n') 
         {
             printf("Некорректный ввод\n");
             fflush(stdout);
             return INCORRECT_INPUT;
         }
-        int b = strtof(argv[4], &endptr);
+        float b = strtof(argv[4], &endptr);
         if (*endptr != '\0' && *endptr != '\n') 
         {
             printf("Некорректный ввод\n");
             fflush(stdout);
             return INCORRECT_INPUT;
         }
-        int c = strtof(argv[5], &endptr);
+        float c = strtof(argv[5], &endptr);
         if (*endptr != '\0' && *endptr != '\n') 
         {
             printf("Некорректный ввод\n");
@@ -169,21 +169,21 @@ int main(int argc, char *argv[]) {
         }
         char* endptr;
         float epsilon = strtof(argv[2], &endptr);
-        if (*endptr != '\0' && *endptr != '\n' || epsilon < 0) 
+        if ((*endptr != '\0' && *endptr != '\n') || epsilon < 0) 
         {
             printf("Некорректный ввод\n");
             fflush(stdout);
             return INCORRECT_INPUT;
         }
         float a = strtof(argv[3], &endptr);
-        if (*endptr != '\0' && *endptr != '\n' || a < 0) 
+        if ((*endptr != '\0' && *endptr != '\n') || a < 0) 
         {
             printf("Некорректный ввод\n");
             fflush(stdout);
             return INCORRECT_INPUT;
         }
         float b = strtof(argv[4], &endptr);
-        if (*endptr != '\0' && *endptr != '\n' || b < 0) 
+        if ((*endptr != '\0' && *endptr != '\n') || b < 0) 
         {
             printf("Некорректный ввод\n");
             fflush(stdout);
