@@ -5,11 +5,11 @@ FF
 123
 0000
 -1
--
--
+
+
 -123
-asdkl;fjkl;asdf
+asdklfjklasdf
 ZZZ
-fasdjkl;jklasdf
--fasdjkl;jklasdf
-1123-12123
+112312123 
+-1 -2 0
+00000000

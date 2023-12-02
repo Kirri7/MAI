@@ -9,6 +9,7 @@
 #include "number-systems.c"
 
 #define DEBUG 0
+#define BUFFER_SIZE 100
 
 #ifdef DEBUG
 #define DEBUG_PRINT(format, ...) printf("Debug: "); printf(format, ##__VA_ARGS__); fflush(stdout)
@@ -18,19 +19,6 @@
 
 #define printf(format, ...) printf(format, ##__VA_ARGS__); fflush(stdout);
 
-typedef struct item
-{
-    char data;
-    struct item* next;
-} item;
-
-typedef struct linked_list
-{
-    item* head;
-} linked_list;
-
-item* pushItem(char data);
-item* readItem(item* curItem, char* data);
 int validateCh(char ch);
 void printHelp();
 int guessMinNumSystem(char ch);
@@ -51,45 +39,75 @@ int main(int argc, char *argv[]) {
         printf("Не удалось открыть файл(ы), грустно 😥");
         return 1;
     }
-    linked_list chQueue;
-    chQueue.head = NULL;
     char ch;
     int inWord = 0;
+    int supressZeros = 0;
     char greatestCh = '0';
+    char number[BUFFER_SIZE] = "";
+    int j = 0;
     while ((ch = fgetc(fileIn)) != EOF) {
         if (ch == '-' && !inWord) {
             if ((ch = fgetc(fileIn)) == EOF) {
-                break;
+                ch = '-';
+                // break;
             } else if (validateCh(ch)) {
                 fprintf(fileOut, "%c", '-');
+                number[j++] = '-';
+            } else {
+                ch = '-';
             }
         } 
-        // if (ch == '0' && !inWord) {
-        //     if ((ch = fgetc(fileIn)) == EOF) {
-        //         break;
-        //     } 
-        //     // else if (!validateCh(ch)) {
-        //     //     fprintf(fileOut, "%c", '0');
-        //     // }
-        // } 
-        if (isspace(ch) && inWord) {
-            fprintf(fileOut, " %d\n", guessMinNumSystem(greatestCh));
-            greatestCh = '0';
-            inWord = 0;
+        if (ch == '0' && !inWord) {
+            supressZeros = 1;
+        } 
+        else if ((isspace(ch) || ch == '\n')) {
+            if (supressZeros) {
+                supressZeros = 0;
+                inWord = 1;
+                fprintf(fileOut, "0");
+                greatestCh = (greatestCh > ch) ? greatestCh : ch;
+            }
+            if (inWord) {
+                int base = guessMinNumSystem(greatestCh);
+                fprintf(fileOut, " %d", base);
+                long temp = strtol(number, NULL, base);
+                fprintf(fileOut, " %ld\n", temp);
+                greatestCh = '0';
+                inWord = 0;
+                memset(number, '\0', BUFFER_SIZE);
+                j = 0;
+            }
+            // пропускаем разделители
         } 
         else if (!validateCh(ch)) {
-            printf("\n некоректная цифра %c\n", ch);
+            printf("некоректная цифра или разделитель %c\n", ch);
+            fclose(fileIn);
+            fflush(fileOut);
+            fclose(fileOut);
+            return 1;
         } 
-        else if (!isspace(ch)) {
+        else {
             inWord = 1;
             fprintf(fileOut, "%c", ch);
-            //pushItem(ch);
+            if (j+1 >= BUFFER_SIZE) {
+                printf("буффер переполнен, число в 10чной будет обрезано\n");
+            } else {
+                number[j++] = ch;
+            }
             greatestCh = (greatestCh > ch) ? greatestCh : ch;
         }
     }
+    if (supressZeros) {
+        inWord = 1;
+        fprintf(fileOut, "0");
+        greatestCh = (greatestCh > ch) ? greatestCh : ch;
+    }
     if (inWord) {
-        fprintf(fileOut, " %d\n", guessMinNumSystem(greatestCh));
-    } 
+        int base = guessMinNumSystem(greatestCh);
+        fprintf(fileOut, " %d", base);
+        long temp = strtol(number, NULL, base);
+        fprintf(fileOut, " %ld\n", temp);
+    }
 
     fclose(fileIn);
     fflush(fileOut);
@@ -112,29 +130,6 @@ int validateCh(char ch) {
     if ('A' <= ch && ch <= 'A' + 25)
         return 1;
     return 0;
-}
-
-item* pushItem(char data) {
-    item* newItem = (item*)malloc(sizeof(item));
-    if (newItem == NULL) {
-        printf("Проблемы с памятю, не выделяется, грустно 🫤");
-        return NULL;
-    }
-    newItem->data = data;
-    newItem->next = NULL;
-
-    return newItem;
-}
-
-item* readItem(item* curItem, char* data) {
-    if (curItem == NULL) {
-        printf("Чтение NULL 🫤");
-        return NULL;
-    }
-    *data = curItem->data;
-    item* nextItem = curItem->next;
-    free(curItem);
-    return nextItem;
 }
 
 int guessMinNumSystem(char ch) {
