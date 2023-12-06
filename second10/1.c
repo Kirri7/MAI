@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <stdlib.h>
+// я запрещаю вам использовать string.h 🕴️
 
 typedef enum {
     SUCCESS = 0,
