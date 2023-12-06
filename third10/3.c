@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -94,6 +95,7 @@ ErrorCode getData(FILE *fileIn, FILE *fileOut, Employee **database, int *dataSiz
             fflush(stdout);
             continue;
         }
+        worker.salary = fabs(worker.salary);
 
         Employee *tempPtr = (Employee*)realloc(workers, sizeof(Employee) * ++wrksCnt);
         if (tempPtr == NULL) {
