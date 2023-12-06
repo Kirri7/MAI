@@ -87,8 +87,9 @@ ErrorCode getData(FILE *fileIn, FILE *fileOut, Employee **database, int *dataSiz
         Employee worker;
         memset(worker.firstName, '\0', sizeof(worker.firstName));
         memset(worker.lastName, '\0', sizeof(worker.lastName));
-        if (sscanf(buffer, "%u %s %s %lf", &worker.id, worker.firstName, 
-                worker.lastName, &worker.salary) != 4 || worker.salary < 0) 
+        char empty;
+        if (sscanf(buffer, "%u %s %s %lf\n%c", &worker.id, worker.firstName, 
+                worker.lastName, &worker.salary, &empty) != 4 || worker.salary < 0) 
         {
             printf("%s\n", errorMessages[INCORRECT_INPUT]);
             printf("%s", buffer);
