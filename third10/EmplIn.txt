@@ -1,0 +1,11 @@
+0 Name Surname 32.3
+37 X Y 1000
+56 Alice Boone 1491.2986
+29 Oscar Mills 1441.777
+27 Andrew Castro 1644.7131
+78 Maude Underwood 2773.9076
+40 Pauline  4167.567
+82  Herbert Rowe  5704.1259
+83 Rosalie Reese -845.3627
+95 Albert Benson 3587.7262
+12 X Y 1000
