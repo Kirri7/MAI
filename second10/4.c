@@ -48,6 +48,8 @@ ErrorCode isConvex(int* res, int dotCnt, ...){
     va_list dots;
     va_start(dots, dotCnt);
     Dot* polygon = (Dot*)malloc(dotCnt * sizeof(Dot));
+    if (!polygon)
+        return MALLOC_ERROR;
 
     for(int i = 0; i < dotCnt; ++i)
         polygon[i] = va_arg(dots, Dot);
