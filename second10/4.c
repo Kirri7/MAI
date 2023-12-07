@@ -113,16 +113,13 @@ ErrorCode findPolyValue(double* res, double x, int degree, ...){
     va_list coefs;
     va_start(coefs, degree);
 
-    double curX = power(x, degree);
-
+    // x(x(x(x0+a)+b)+c)+d
+    // На каждом этапе прошлое * x + коэф
     for (int i = degree; i > 0; --i){
         double coef = va_arg(coefs, double);
-        *res += coef * curX;
-        if (x != 0)
-            curX /= x;
+        *res += coef;
+        *res *= x;
     }
-    double coef = va_arg(coefs, double);
-    *res += coef; // x^0
 
     va_end(coefs);
     return SUCCESS;
