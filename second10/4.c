@@ -115,10 +115,10 @@ ErrorCode findPolyValue(double* res, double x, int degree, ...){
 
     // x(x(x(x0+a)+b)+c)+d
     // На каждом этапе прошлое * x + коэф
-    for (int i = degree; i > 0; --i){
+    for (int i = degree; i >= 0; --i){
+        *res *= x;
         double coef = va_arg(coefs, double);
         *res += coef;
-        *res *= x;
     }
 
     va_end(coefs);
@@ -143,6 +143,7 @@ int main() {
     fflush(stdout);
     
     double ress = 100;
+    // 0 + 0 + 1 = 1
     findPolyValue(&ress, 0.0, 2, 1.0, 1.0, 1.0);
     printf("Полином: %lf\n", ress);
     fflush(stdout);
