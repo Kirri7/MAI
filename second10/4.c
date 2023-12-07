@@ -78,7 +78,7 @@ ErrorCode isConvex(int* res, int dotCnt, ...){
             free(polygon);
             return INCORRECT_INPUT;
         } 
-        else if (S > 0 && areaSign != 1 || S < 0 && areaSign != -1) {
+        else if ((S > 0 && areaSign != 1) || (S < 0 && areaSign != -1)) {
             // найден вогнутый участок
             *res = 0;
             free(polygon);
