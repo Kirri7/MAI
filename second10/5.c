@@ -557,8 +557,6 @@ void dumpsFloat(char* str, float *ptr, int* resPos) {
     }
 }
 
-//resPos += sprintf(str + resPos, 
-
 ErrorCode oversprintf(char* str, const char *format, ...) {
     if (format == NULL) return INCORRECT_INPUT;
     int resPos = 0;
