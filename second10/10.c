@@ -50,9 +50,13 @@ ErrorCode findGArray(const double epsilon, const double a, double **res, int ran
     if (*res == NULL)
         return MALLOC_ERROR;
 
+    double *fArrray = (double*)malloc((rank+1) * sizeof(double));
+    if (*res == NULL) {
+        free(res);
+        return MALLOC_ERROR;
+    }
     va_list fList;
     va_start(fList, rank);
-    double fArrray[rank+1];
     for (int i = 0; i <= rank; ++i)
         fArrray[i] = va_arg(fList, double);
     va_end(fList);
@@ -72,6 +76,7 @@ ErrorCode findGArray(const double epsilon, const double a, double **res, int ran
         }
         (*res)[i] = g;
     }
+    free(fArrray);
     return SUCCESS;
 }
 
