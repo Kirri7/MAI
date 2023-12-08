@@ -146,6 +146,15 @@ ErrorCode shuntingYard(const char input[], int inpLen, char output[BUFFER_SIZE])
     initStack(&stack);
     memset(output, '\0', BUFFER_SIZE);
     int j = 0;
+    
+    while (isspace(input[0]))
+        ++input;
+    if (input[0] == '-') {
+        char input2[BUFFER_SIZE];
+        input2[0] = '0';
+        strncpy(input2+1, input, inpLen);
+        input = input2;
+    }
 
     for (int i = 0; i < inpLen; ++i) {
         if (checkOutputOverflow(j, output) != SUCCESS) {
