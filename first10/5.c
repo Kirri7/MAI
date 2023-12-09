@@ -287,7 +287,13 @@ int main(int argc, char *argv[]) {
         return 0;
     } else if (argc == 3 && strcmp(argv[1], "-e") == 0) {
         //double epsilon = atof(argv[2]);
-        double epsilon = strtod(argv[2], NULL);
+        char *endptr;
+        double epsilon = strtod(argv[2], &endptr);
+        if (*endptr != '\0') {
+            printf("%s\n", errorMessages[INCORRECT_INPUT]);
+            fflush(stdout);
+            return INCORRECT_INPUT;
+        }
         printf("ε = %.16lf\n", epsilon);
 
         printf("Введите x: ");
@@ -305,7 +311,6 @@ int main(int argc, char *argv[]) {
             ++inpPtr;
         }
 
-        char *endptr;
         double x = strtod(input, &endptr);
         if (*endptr != '\n') {
             printf("%s\n", errorMessages[INCORRECT_INPUT]);
