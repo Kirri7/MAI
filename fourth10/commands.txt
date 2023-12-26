@@ -1,0 +1,16 @@
+
+Load A, vector.txt;
+Save A, vec_out.txt; Rand A, 5, -10, 10;
+Concat A, b;
+ Free m;
+
+Remove a, 2, 7;
+Copy A, 1, 3, b;
+Sort A+;
+Shuffle A;
+Stats A;
+Sort A-;
+ Rand A, 5, -3, 1;
+Print a, all;
+Print a, 0;
+Print a, 4, 16;

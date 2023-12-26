@@ -9,6 +9,9 @@
 typedef enum {
     SUCCESS = 0,
     INCORRECT_INPUT,
+    INCORRECT_ARG,
+    INCORRECT_COMMAND,
+    NO_DELIM,
     OVERFLOW_ERROR,
     MALLOC_ERROR,
     FILE_OPENING_ERROR,
@@ -19,6 +22,9 @@ typedef enum {
 static const char* errorMessages[] = {
     "Всё хорошо, можно идти пить чай ☕",
     "Некорректный ввод, попробуйте ещё раз 🤨",
+    "Некорректный аргумент, попробуйте ещё раз 🤨",
+    "Некорректная команда, попробуйте ещё раз 🤨",
+    "Не найдена ';', грустно 😐",
     "Произошло переполнение, ой 🤯",
     "Проблемы с выделением памяти, грустно 😐",
     "Не удалось открыть файл, грустно 😥",
@@ -26,8 +32,9 @@ static const char* errorMessages[] = {
     "Неизвестная ошибка, что-то пошло не так 🫢"
 };
 
-#define INT_SIZE 9
+#define INT_SIZE 10 // ! осторожно со сравнениями < >
 #define INT_FORMAT "%9s"
+#define BUFFER_SIZE 100
 
 
 typedef struct {
@@ -147,7 +154,7 @@ ErrorCode Load(IntVector *vec, const char *filename) {
     memset(buff, '\0', INT_SIZE);
     while (fscanf(file, INT_FORMAT, buff) == 1) {
         // printf("'%s'\n", buff);
-        if (buff[INT_SIZE-1] != '\0') {
+        if (buff[INT_SIZE-2] != '\0') {
             char c = 'c';
             while (!isspace(c) && c != EOF)
                 c = getc(file);
@@ -209,16 +216,32 @@ ErrorCode Concat(IntVector *A, IntVector *B) {
     return SUCCESS;
 }
 
-ErrorCode Free(IntVector *vec) {
-    ErrorCode code = clearIntVector(vec);
-    switch (code) {
-        default:
-            return code;
-        case SUCCESS:
-            break;
+ErrorCode Copy(const IntVector *A, const size_t indexSt, const size_t indexEn, IntVector *B) {
+    if (!A || !B || 0 > indexSt || indexSt >= indexEn || indexEn >= A->size)
+        return INCORRECT_INPUT;
+
+    for (size_t i = indexSt; i <= indexEn; ++i) {
+        int res;
+        ErrorCode code = getIntVector(A, i, &res);
+        switch (code) {
+            default:
+                return code;
+            case SUCCESS:
+                break;
+        }
+        code = pushIntVector(B, res);
+        switch (code) {
+            default:
+                return code;
+            case SUCCESS:
+                break;
+        }
     }
-    code = pushIntVector(vec, 0);
-    return code;
+    return SUCCESS;
+}
+
+ErrorCode Free(IntVector *vec) {
+    return clearIntVector(vec);
 }
 
 ErrorCode Remove(IntVector *vec, size_t index, int count) {
@@ -231,7 +254,7 @@ ErrorCode Remove(IntVector *vec, size_t index, int count) {
 void Stats(const IntVector *vec) {
     if (!vec)
         return;
-    printf("Размер: %d\n", vec->size);
+    printf("Размер: %zu\n", vec->size);
     if (vec->size == 0)
         return;
 
@@ -252,7 +275,7 @@ void Stats(const IntVector *vec) {
             minInd = i;
         }
         int tempCnt = 1;
-        for (int j = i + 1; j < vec->size; ++j) {
+        for (size_t j = i + 1; j < vec->size; ++j) {
             if (vec->data[i] == vec->data[j])
                 ++tempCnt;
         }
@@ -267,8 +290,8 @@ void Stats(const IntVector *vec) {
     printf("Максимальная мода: %d\n", freqElem);
     double average = summ / vec->size;
     printf("СрЗнач: %f\n", average);
-    int futhest = (fabs(average-maxEl) > fabs(average-minEl)) ? average-maxEl : average-minEl;
-    printf("Максимальное отклонение от СрЗнач: %f\n", summ / vec->size);
+    double futhest = (fabs(average-maxEl) > fabs(average-minEl)) ? average-maxEl : average-minEl;
+    printf("Максимальное отклонение от СрЗнач: %f\n", futhest);
     fflush(stdout);
 }
 
@@ -331,14 +354,14 @@ void Shuffle(const IntVector *vec) {
     return qsort(vec->data, vec->size, sizeof(int), cmpRandom);
 }
 
-ErrorCode Rand(IntVector *vec, int count, int lb, int lr) {
-    if (!vec || lb > lr || 0 >= count)
+ErrorCode Rand(IntVector *vec, int count, int lb, int rb) {
+    if (!vec || lb > rb || 0 >= count)
         return INCORRECT_INPUT;
 
     for (size_t i = 0; i < count; ++i) {
         int randomInt;
-        if (lr - lb)
-            randomInt = lb + rand() % (lr - lb + 1);
+        if (rb - lb)
+            randomInt = lb + rand() % (rb - lb + 1);
         else
             randomInt = lb;
         ErrorCode code = pushIntVector(vec, randomInt);
@@ -352,25 +375,453 @@ ErrorCode Rand(IntVector *vec, int count, int lb, int lr) {
     return SUCCESS;
 }
 
-int main() {
+ErrorCode process1Arguments(char **arg) {
+    // линия уже должна быть обработана strtok
+    if (!arg)
+        return INCORRECT_INPUT;
+
+    char *argument = strtok(NULL, ";");
+    if (!argument) 
+        return INCORRECT_ARG;
+    while (isspace(*argument)) ++argument;
+
+    *arg = argument;
+    return SUCCESS;
+}
+
+ErrorCode process2Arguments(char *vecChr, char **arg2) {
+    // линия уже должна быть обработана strtok
+    if (!vecChr || !arg2)
+        return INCORRECT_INPUT;
+
+    char *vecName = strtok(NULL, ",");
+    if (!vecName) 
+        return INCORRECT_ARG;
+
+    while (isspace(*vecName)) ++vecName; // '\0' не пробел
+    if (strlen(vecName) != 1 || !isalpha(*vecName)) 
+        return INCORRECT_ARG;
+
+    *vecName = toupper(*vecName);
+
+    char *argument2 = strtok(NULL, ";");
+    if (!argument2) 
+        return INCORRECT_ARG;
+    
+    while (isspace(*argument2)) ++argument2;
+
+    *vecChr = *vecName;
+    *arg2 = argument2;
+    return SUCCESS;
+}
+
+ErrorCode process3Arguments(char *vecChr, char **arg2, char **arg3) {
+    // линия уже должна быть обработана strtok
+    if (!vecChr || !arg2 || !arg3)
+        return INCORRECT_INPUT;
+
+    char *vecName = strtok(NULL, ",");
+    if (!vecName) 
+        return INCORRECT_ARG;
+
+    while (isspace(*vecName)) ++vecName; // '\0' не пробел
+    if (strlen(vecName) != 1 || !isalpha(*vecName)) 
+        return INCORRECT_ARG;
+    *vecName = toupper(*vecName);
+
+    char *argument2 = strtok(NULL, ",");
+    if (!argument2) 
+        return INCORRECT_ARG;
+    while (isspace(*argument2)) ++argument2;
+
+    char *argument3 = strtok(NULL, ";");
+    if (!argument3) 
+        return INCORRECT_ARG;
+    while (isspace(*argument3)) ++argument3;
+
+    *vecChr = *vecName;
+    *arg2 = argument2;
+    *arg3 = argument3;
+    return SUCCESS;
+}
+
+ErrorCode process4Arguments(char *vecChr, char **arg2, char **arg3, char **arg4) {
+    // линия уже должна быть обработана strtok
+    if (!vecChr || !arg2 || !arg3 || !arg4)
+        return INCORRECT_INPUT;
+
+    char *vecName = strtok(NULL, ",");
+    if (!vecName) 
+        return INCORRECT_ARG;
+
+    while (isspace(*vecName)) ++vecName; // '\0' не пробел
+    if (strlen(vecName) != 1 || !isalpha(*vecName)) 
+        return INCORRECT_ARG;
+    *vecName = toupper(*vecName);
+
+    char *argument2 = strtok(NULL, ",");
+    if (!argument2) 
+        return INCORRECT_ARG;
+    while (isspace(*argument2)) ++argument2;
+
+    char *argument3 = strtok(NULL, ",");
+    if (!argument3) 
+        return INCORRECT_ARG;
+    while (isspace(*argument3)) ++argument3;
+
+    char *argument4 = strtok(NULL, ";");
+    if (!argument4) 
+        return INCORRECT_ARG;
+    while (isspace(*argument4)) ++argument4;
+
+    *vecChr = *vecName;
+    *arg2 = argument2;
+    *arg3 = argument3;
+    *arg4 = argument4;
+    return SUCCESS;
+}
+
+ErrorCode doInstructions(FILE *file) {
+    IntVector vecTable[26];
+    for (int i = 0; i < 26; ++i) {
+        ErrorCode code = createIntVector(&vecTable[i]);
+        if (code != SUCCESS)
+            return code;
+        // vecTable[i] = NULL;
+    }
+
+    char buff[BUFFER_SIZE];
+    char c;
+    ErrorCode whileCode = SUCCESS;
+    while ((c = fgetc(file)) != EOF) {
+        // удаление одной буквы после ';'
+        memset(buff, '\0', BUFFER_SIZE);
+        int k = 0;
+        buff[k++] = c;
+        while ((c = fgetc(file)) != EOF) {
+            if (c == ';' || k >= BUFFER_SIZE) {
+                buff[k++] = ';';
+                break;
+            }
+            buff[k++] = c;
+        }
+
+        char *command = strtok(buff, " \n");
+        if (!command)
+            break; // todo ;; + error code + memory leak
+        while (isspace(*command)) ++command;
+
+        if (strcmp(command, "Load") == 0)
+        {
+            char vecName;
+            char *filename;
+            ErrorCode code = process2Arguments(&vecName, &filename);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+            printf("> Load %c, %s;\n", vecName, filename);
+
+            code = Load(&vecTable[vecName-'A'], filename);
+            if (code != SUCCESS) {
+                whileCode = code;
+                break;
+            }
+        }
+        else if (strcmp(command, "Save") == 0)
+        {
+            char vecName;
+            char *filename;
+            ErrorCode code = process2Arguments(&vecName, &filename);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+            printf("> Save %c, %s;\n", vecName, filename);
+
+            code = Save(&vecTable[vecName-'A'], filename);
+            if (code != SUCCESS) {
+                whileCode = code;
+                break;
+            }
+        }
+        else if (strcmp(command, "Rand") == 0)
+        {
+            char vecName;
+            char *countStr, *lbStr, *rbStr;
+            ErrorCode code = process4Arguments(&vecName, &countStr, &lbStr, &rbStr);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+
+            printf("> Rand %c, %s, %s, %s;\n", vecName, countStr, lbStr, rbStr);
+            char *endptr;
+            int count = strtol(countStr, &endptr, 10);
+            if (*endptr != '\0') {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            int lb = strtol(lbStr, &endptr, 10);
+            if (*endptr != '\0') {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            int rb = strtol(rbStr, &endptr, 10);
+            if (*endptr != '\0') {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+
+            code = Rand(&vecTable[vecName-'A'], count, lb, rb);
+            if (code != SUCCESS) {
+                whileCode = code;
+                break;
+            }
+        }
+        else if (strcmp(command, "Concat") == 0)
+        {
+            char vecName;
+            char *vecB;
+            ErrorCode code = process2Arguments(&vecName, &vecB);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+            printf("> Concat %c, %s;\n", vecName, vecB);
+            if (strlen(vecB) != 1 || !isalpha(*vecB)) {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            *vecB = toupper(*vecB);
+            char vecName2 = *vecB;
+
+            code = Concat(&vecTable[vecName-'A'], &vecTable[vecName2-'A']);
+            if (code != SUCCESS) {
+                whileCode = code;
+                break;
+            }
+        }
+        else if (strcmp(command, "Free") == 0)
+        {
+            char *vecA;
+            ErrorCode code = process1Arguments(&vecA);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+            printf("> Free %s;\n", vecA);
+            if (strlen(vecA) != 1 || !isalpha(*vecA)) {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            *vecA = toupper(*vecA);
+            char vecName = *vecA;
+
+            code = Free(&vecTable[vecName-'A']);
+            if (code != SUCCESS) {
+                whileCode = code;
+                break;
+            } 
+        }
+        else if (strcmp(command, "Remove") == 0)
+        {
+            char vecName;
+            char *arg1, *arg2;
+            ErrorCode code = process3Arguments(&vecName, &arg1, &arg2);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+
+            printf("> Remove %c, %s, %s;\n", vecName, arg1, arg2);
+            char *endptr;
+            int ind = strtol(arg1, &endptr, 10);
+            if (*endptr != '\0') {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            int cnt = strtol(arg2, &endptr, 10);
+            if (*endptr != '\0') {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+
+            code = Remove(&vecTable[vecName-'A'], ind, cnt);
+            if (code != SUCCESS) {
+                whileCode = code;
+                break;
+            }
+        }
+        else if (strcmp(command, "Copy") == 0)
+        {
+            char vecName;
+            char *indStStr, *indEnStr, *vecB;
+            ErrorCode code = process4Arguments(&vecName, &indStStr, &indEnStr, &vecB);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+
+            printf("> Copy %c, %s, %s, %s;\n", vecName, indStStr, indEnStr, vecB);
+            char *endptr;
+            int indSt = strtol(indStStr, &endptr, 10);
+            if (*endptr != '\0') {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            int indEn = strtol(indEnStr, &endptr, 10);
+            if (*endptr != '\0') {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            if (strlen(vecB) != 1 || !isalpha(*vecB)) {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            *vecB = toupper(*vecB);
+            char vecName2 = *vecB;
+
+            code = Copy(&vecTable[vecName-'A'], indSt, indEn, &vecTable[vecName2-'A']);
+            if (code != SUCCESS) {
+                whileCode = code;
+                break;
+            }
+        }
+        else if (strcmp(command, "Sort") == 0)
+        {
+            char *vecA;
+            ErrorCode code = process1Arguments(&vecA);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+            printf("> Sort %s;\n", vecA);
+            if (strlen(vecA) != 2 || !isalpha(*vecA) || (vecA[1] != '+' && vecA[1] != '-')) {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            *vecA = toupper(*vecA);
+            char vecName = *vecA;
+            char mode = vecA[1];
+
+            Sort(&vecTable[vecName-'A'], mode);
+        }
+        else if (strcmp(command, "Shuffle") == 0)
+        {
+            char *vecA;
+            ErrorCode code = process1Arguments(&vecA);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+            printf("> Shuffle %s;\n", vecA);
+            if (strlen(vecA) != 1 || !isalpha(*vecA)) {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            *vecA = toupper(*vecA);
+            char vecName = *vecA;
+
+            Shuffle(&vecTable[vecName-'A']);
+        }
+        else if (strcmp(command, "Stats") == 0)
+        {
+            char *vecA;
+            ErrorCode code = process1Arguments(&vecA);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+            printf("> Stats %s;\n", vecA);
+            if (strlen(vecA) != 1 || !isalpha(*vecA)) {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            *vecA = toupper(*vecA);
+            char vecName = *vecA;
+
+            Stats(&vecTable[vecName-'A']);
+        }
+        else if (strcmp(command, "Print") == 0)
+        {
+            char vecName;
+            char *argStr;
+            ErrorCode code = process2Arguments(&vecName, &argStr);
+            if (code != SUCCESS) {
+                printf("%s\n", errorMessages[code]);
+                fflush(stdout);
+                continue;
+            }
+            printf("> Print %c, %s;\n", vecName, argStr);
+
+            if (strcmp(argStr, "all") == 0) {
+                PrintAll(&vecTable[vecName-'A']);
+                continue;
+            }
+            char *endptr;
+            int ind = strtol(argStr, &endptr, 10);
+            if (*endptr != '\0' && *endptr != ',') {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            if (*endptr == '\0')
+                Print1(&vecTable[vecName-'A'], ind);
+
+            char *cntStr = endptr + 1;
+            int ind2 = strtol(cntStr, &endptr, 10);
+            if (*endptr != '\0') {
+                printf("%s\n", errorMessages[INCORRECT_ARG]);
+                continue;
+            }
+            PrintN(&vecTable[vecName-'A'], ind, ind2);
+        }
+        else 
+        {
+            if (*command != '\0')
+                printf("%s\n", errorMessages[INCORRECT_COMMAND]);
+            continue;
+        }
+    }
+
+    // char *endptr;
+    // int num = strtol(buff, &endptr, 10);
+    // if (*endptr == '\0')
+    for (int i = 0; i < 26; ++i) 
+        freeIntVector(&vecTable[i]);
+    if (whileCode != SUCCESS)
+        return whileCode;
+    if (!feof(file))
+        return FILE_READING_ERROR;
+    return SUCCESS;
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 2) {
+        printf("%s <имя_файла>\n", argv[0]);
+        return INCORRECT_INPUT;
+    }
+
     srand(time(NULL));
-    // todo нижний регистр
-    IntVector vec;
-    IntVector vecB;
-    createIntVector(&vec);
+    FILE *file = fopen(argv[1], "r");
+    if (file == NULL) {
+        printf("%s\n", errorMessages[FILE_OPENING_ERROR]);
+        fflush(stdout);
+        return FILE_OPENING_ERROR;
+    }
 
-    Load(&vec, "vector.txt");
-    // Load(&vecB, "vector.txt");
-
-    printIntVectorOut(&vec);
-
-    Rand(&vec, 10, -10, 10);
-
-    printIntVectorOut(&vec);
-
-    freeIntVector(&vec);
-
-    fflush(stdout);
+    ErrorCode code = doInstructions(file);
+    fclose(file);
     
     return 0;
 }
