@@ -70,12 +70,22 @@ ErrorCode calculateLimitPi(long double epsilon, long double* result) {
         return INCORRECT_INPUT;
     long double n = 1;
     long double limit0 = 0;
-    long double limit1 = powl((powl(2, n) * factorial(n)), 4) / (n * (powl(factorial(2*n), 2)));
+    // long double limit1 = powl((powl(2, n) * factorial(n)), 4) / (n * (powl(factorial(2*n), 2)));
+    long double limit1 = n / (n * n) * 4;
 
     while (fabsl(limit1 - limit0) > epsilon) {
         ++n;
         limit0 = limit1;
-        limit1 = powl((powl(2, n) * factorial(n)), 4) / (n * (powl(factorial(2*n), 2)));
+        // limit1 = powl((powl(2, n) * factorial(n)), 4) / (n * (powl(factorial(2*n), 2)));
+        long double summ = 0;
+        long double k = 0;
+        while (k <= n) {
+            if (summ + sqrtl(n*n - k*k) < summ)
+                break;
+            summ += sqrtl(n*n - k*k);
+            k += 1;
+        }
+        limit1 = summ / (n * n) * 4;
         if (limit1 > limit0) {
             *result = limit1;
             return OVERFLOW_ERROR;
