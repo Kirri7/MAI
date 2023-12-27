@@ -822,6 +822,7 @@ int main(int argc, char *argv[]) {
 
     ErrorCode code = doInstructions(file);
     fclose(file);
-    
-    return 0;
+    printf("%s\n", errorMessages[code]);
+    fflush(stdout);
+    return code;
 }
