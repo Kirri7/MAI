@@ -1,0 +1,12 @@
+0 Name Surname fEpiD 0 5 5 4 5
+37 X Y gBYgAFJQVVq 3 2 4 2 4
+56 Alice Boone fEpiD 4 2 5 5 3
+29 Oscar Mills menVBZizUm9ypDJ 1 3 3 3 4
+27 Andrew Castro PqusQwQO 3 4 5 3 4
+78 Maude Underwood i7s9No83 3 4 2 3 3 3
+40 Pauline PqusQwQO 4 5 2 3 4
+82  Herbert Rowe m8968425dYsP 2 2 3 3 
+83 Rosalie Reese PqusQwQO 4 5 5 2 5
+95 Albert Benson df7lNf 3 4 3 4 5
+37 X Y PqusQwQO 5 2 2 3 3
+12 X Y PqusQwQO 3 3 5 2 4
